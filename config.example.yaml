@@ -1,0 +1,41 @@
+# Copy to config.yaml and edit. config.yaml is gitignored.
+
+network:
+  ps5_ip: auto              # or 192.168.1.120
+  port_rx: 33740
+  port_tx: 33739
+  heartbeat_seconds: 10
+  # Heartbeat byte selects the packet format. 'B' (316 bytes) is the default
+  # because it exposes the steering angle and body-force fields that the
+  # detectors need. Use 'A' (296 bytes) only if you have a specific reason.
+  packet_format: B
+
+coach:
+  provider: anthropic        # anthropic | openai | gemini | ollama
+  model: claude-haiku-4-5
+  driver_style: smooth       # smooth | aggressive | learning
+  max_advice_per_corner: 1
+  global_rate_limit_seconds: 4
+
+voice:
+  engine: pyttsx3            # pyttsx3 | piper | system
+  speed: 230
+  piper_voice: en_US-amy-medium
+
+detectors:
+  enabled:
+    - corner.segment
+    - braking.late_brake
+    - throttle.wheelspin
+    - throttle.sawing
+    - steering.understeer
+  thresholds:
+    corner_min_speed_kmh: 45
+    corner_entry_brake: 65
+    corner_entry_lat_g: 0.95
+    corner_min_dwell_s: 0.5
+
+session:
+  log_dir: ./sessions
+  rotation_mb: 10
+  generate_summary: true
