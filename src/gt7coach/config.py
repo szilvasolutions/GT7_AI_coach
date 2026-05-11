@@ -70,6 +70,8 @@ class LoadedConfig:
     detector_configs: dict[str, Any]
     coach_provider: str
     coach_model: str | None
+    coach_car_class: str
+    coach_track: str | None
 
 
 _DEFAULT_ENABLED = {
@@ -108,6 +110,8 @@ def default_config() -> LoadedConfig:
         },
         coach_provider="anthropic",
         coach_model=None,
+        coach_car_class="",
+        coach_track=None,
     )
 
 
@@ -150,6 +154,10 @@ def _merge(cfg: LoadedConfig, raw: dict[str, Any]) -> LoadedConfig:
         cfg.advisor.driver_style = str(coach["driver_style"])
     if "global_rate_limit_seconds" in coach:
         cfg.rate_limiter.global_cooldown_s = float(coach["global_rate_limit_seconds"])
+    if "car_class" in coach:
+        cfg.coach_car_class = str(coach["car_class"])
+    if "track" in coach:
+        cfg.coach_track = str(coach["track"]) if coach["track"] else None
 
     voice = raw.get("voice") or {}
     if "engine" in voice:

@@ -48,6 +48,7 @@ from gt7coach.detectors import (
 )
 from gt7coach.session import SessionLogger, summarise
 from gt7coach.telemetry import Packet, Receiver, ReceiverConfig, replay_csv
+from gt7coach.tracks import TrackDetector
 from gt7coach.voice import make_voice
 
 log = logging.getLogger("gt7coach.coach")
@@ -206,6 +207,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=4.0,
         help="Global rate-limit between advices, seconds (default: 4)",
     )
+    p.add_argument(
+        "--car-class",
+        default=None,
+        help='Free-form car descriptor (e.g. "Gr.3 RWD") fed into every prompt',
+    )
+    p.add_argument(
+        "--track",
+        default=None,
+        help='Force a known track id (skips auto-detection). e.g. "deep_forest"',
+    )
 
     # Voice flags.
     p.add_argument(
@@ -323,10 +334,12 @@ def main(argv: list[str] | None = None) -> int:
         else cfg.rate_limiter.global_cooldown_s,
         duplicate_window_s=cfg.rate_limiter.duplicate_window_s,
     )
+    car_class = args.car_class if args.car_class is not None else cfg.coach_car_class
     advisor_cfg = AdvisorConfig(
         driver_style=args.driver_style
         if args.driver_style != "smooth"
         else cfg.advisor.driver_style,
+        car_class=car_class,
     )
     advisor = Advisor(
         provider=provider,
@@ -366,11 +379,28 @@ def main(argv: list[str] | None = None) -> int:
 
     seg = CornerSegmenter()
     incident_detector = IncidentDetector()
+    track_detector = TrackDetector()
+    # CLI / config track override happens once at startup.
+    forced_track = args.track or cfg.coach_track
+    if forced_track:
+        try:
+            track = track_detector.force(forced_track)
+            advisor.set_track_shape(track.shape_description)
+        except KeyError as exc:
+            log.warning("--track override failed: %s", exc)
+
     corner_idx = 0
     try:
         for packet in stream:
             if session is not None:
                 session.log_packet(packet)
+            # Try to pin down the track from world coordinates if we haven't
+            # yet. The detector is internally idempotent once chosen / given
+            # up, so the call cost is negligible.
+            if track_detector.track is None:
+                tr = track_detector.feed(packet)
+                if tr is not None:
+                    advisor.set_track_shape(tr.shape_description)
             # Incidents fire on a single packet; check before corner detection
             # so a spin during a corner trace interrupts the planned advice.
             incident = incident_detector.feed(packet)
@@ -414,6 +444,10 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         if rx is not None:
             rx.stop()
+        # Let the async coach worker drain any in-flight LLM call before we
+        # tear the voice down, so the last corner's advice still gets spoken.
+        advisor.flush()
+        advisor.stop()
         voice.stop()
         if session is not None:
             session.close()

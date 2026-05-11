@@ -19,6 +19,13 @@ coach:
   driver_style: smooth       # smooth | aggressive | learning
   max_advice_per_corner: 1
   global_rate_limit_seconds: 4
+  # car_class is a free-form string spliced into every coaching prompt so the
+  # AI can tailor advice to your drivetrain / power tier. Examples:
+  # "Gr.3 RWD", "Gr.4 AWD", "N300 FWD", "Vintage GT3", "Formula".
+  # car_class: "Gr.3 RWD"
+  # Force a known track by id (skip auto-detection from GPS). Built-in IDs:
+  # deep_forest. Leave blank to auto-detect; falls back to generic coaching.
+  # track: deep_forest
 
 voice:
   engine: pyttsx3            # pyttsx3 | piper | system
