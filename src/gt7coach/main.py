@@ -269,9 +269,24 @@ def main(argv: list[str] | None = None) -> int:
     provider_name, provider_reason = _select_provider(
         args.provider, cfg.coach_provider, args.api_key
     )
-    model = args.model or cfg.coach_model
+    # The model name in config.yaml is provider-specific (e.g. "claude-haiku-4-5"
+    # only makes sense for Anthropic). If we fell back to a different provider,
+    # ignore the config's model and let the chosen provider use its own default.
+    if args.model:
+        model: str | None = args.model
+    elif provider_name == cfg.coach_provider:
+        model = cfg.coach_model
+    else:
+        model = None
+        if cfg.coach_model:
+            log.warning(
+                "ignoring config.coach.model=%r because provider switched from %r to %r",
+                cfg.coach_model,
+                cfg.coach_provider,
+                provider_name,
+            )
     api_key = _resolve_api_key(provider_name, args.api_key)
-    log.info("provider: %s (%s)", provider_name, provider_reason)
+    log.info("provider: %s (%s) model=%s", provider_name, provider_reason, model or "<default>")
     try:
         provider = make_provider(provider_name, api_key=api_key, model=model)
     except Exception as exc:
@@ -318,6 +333,14 @@ def main(argv: list[str] | None = None) -> int:
         rate_limiter=RateLimiter(rate_limiter_cfg),
         config=advisor_cfg,
     )
+
+    # Audible startup confirmation: if the user can hear "Coach ready" they
+    # know the audio pipeline works before they wait for a corner event.
+    if voice_name != "null":
+        try:
+            voice.speak("Coach ready.")
+        except Exception:  # pragma: no cover — non-fatal
+            pass
 
     if args.source == "live":
         stream, rx = _stream_live(args)

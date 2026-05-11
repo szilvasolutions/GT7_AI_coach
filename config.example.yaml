@@ -12,7 +12,10 @@ network:
 
 coach:
   provider: anthropic        # anthropic | openai | gemini | ollama
-  model: claude-haiku-4-5
+  # model is PROVIDER-SPECIFIC. Leave blank to use the provider's default
+  # (claude-haiku-4-5 for anthropic, gpt-4o-mini for openai, gemini-2.5-flash
+  # for gemini, llama3.1:8b for ollama).
+  # model: claude-haiku-4-5
   driver_style: smooth       # smooth | aggressive | learning
   max_advice_per_corner: 1
   global_rate_limit_seconds: 4
