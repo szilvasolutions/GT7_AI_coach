@@ -9,14 +9,15 @@ logger (which the provider doesn't see).
 from __future__ import annotations
 
 import logging
+import random
 from collections import deque
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from gt7coach.coach.prompt import SYSTEM_PROMPT, build_user_prompt
+from gt7coach.coach.prompt import SARCASTIC_SYSTEM_PROMPT, SYSTEM_PROMPT, build_user_prompt
 from gt7coach.coach.providers import CoachProvider, ProviderError
 from gt7coach.coach.rate_limiter import RateLimiter
-from gt7coach.detectors import CornerTrace, Event
+from gt7coach.detectors import CornerTrace, Event, Incident
 from gt7coach.detectors.base import G_MS2
 from gt7coach.voice.base import VoiceEngine
 
@@ -45,6 +46,31 @@ _FALLBACK_PHRASES: dict[str, str] = {
 
 def fallback_phrase(event_type: str) -> str:
     return _FALLBACK_PHRASES.get(event_type, "")
+
+
+# Canned sarcastic remarks used when the LLM is unavailable for an incident.
+# Multiple per type so a string of incidents doesn't sound robotic.
+_INCIDENT_FALLBACKS: dict[str, tuple[str, ...]] = {
+    "spin": (
+        "Well, that was elegant.",
+        "Plenty of practice corners back there.",
+        "Just doing some gardening, then.",
+        "Right, who taught you to drive?",
+        "That'll do, pirouette.",
+    ),
+    "crash": (
+        "That'll buff right out.",
+        "Box this lap. Apparently.",
+        "Hope you brought the spare.",
+        "Cars do not, in fact, bounce.",
+        "Bit of a moment there.",
+    ),
+}
+
+
+def incident_fallback_phrase(incident_type: str) -> str:
+    options = _INCIDENT_FALLBACKS.get(incident_type)
+    return random.choice(options) if options else ""
 
 
 @dataclass(slots=True)
@@ -112,6 +138,17 @@ class AdvisorResult:
     user_prompt: str | None = None
 
 
+@dataclass(slots=True)
+class IncidentResult:
+    """What happened for a given incident (spin / crash). Symmetric to AdvisorResult."""
+
+    advice: str | None
+    incident: Incident
+    suppressed_reason: str | None = None
+    system_prompt: str | None = None
+    user_prompt: str | None = None
+
+
 class Advisor:
     """Per ARCHITECTURE.md section 7."""
 
@@ -127,6 +164,7 @@ class Advisor:
         self.rate_limiter = rate_limiter
         self.config = config or AdvisorConfig()
         self.history: list[AdvisorResult] = []
+        self.incident_history: list[IncidentResult] = []
         # (event_type, advice_text) of the last few utterances, surfaced to the
         # LLM so it can vary its phrasing across consecutive corners.
         self._recent_advice: deque[tuple[str, str]] = deque(maxlen=_RECENT_ADVICE_DEPTH)
@@ -210,6 +248,80 @@ class Advisor:
             user_prompt=user_prompt,
         )
 
+    def on_incident(self, incident: Incident) -> IncidentResult:
+        """Handle a spin / crash / impact: speak a sarcastic remark.
+
+        Incidents bypass the corner rate-limiter and the voice-busy gate —
+        they're more important than whatever coaching tip was about to play.
+        The voice is told to ``interrupt`` (clear the pending queue), and the
+        IncidentDetector's own 10 s cooldown prevents repeat fire from one
+        prolonged event.
+        """
+        user_prompt = f"The driver just had a {incident.type}. Roast it in one short line."
+        try:
+            advice = self.provider.complete(SARCASTIC_SYSTEM_PROMPT, user_prompt, max_tokens=64)
+            failure_reason: str | None = None
+        except ProviderError as exc:
+            log.warning("provider failed on incident: %s — falling back", exc)
+            advice = ""
+            failure_reason = f"provider-error: {exc}"
+
+        advice = (advice or "").strip()
+        # Strip surrounding quotes the LLM sometimes wraps the remark in.
+        advice = advice.strip("\"'`")
+        if advice and len(advice.split()) < 2:
+            failure_reason = f"too-short-response: {advice!r}"
+            advice = ""
+        if not advice:
+            advice = incident_fallback_phrase(incident.type)
+            failure_reason = f"{failure_reason or 'empty-response'}; spoke fallback"
+        if not advice:
+            # No canned phrase for this incident type — extremely unlikely but
+            # we still record cleanly.
+            return self._record_incident(
+                None,
+                incident,
+                failure_reason or "no-fallback",
+                system_prompt=SARCASTIC_SYSTEM_PROMPT,
+                user_prompt=user_prompt,
+            )
+
+        self.voice.interrupt(advice)
+        # Also feed the remark into recent_advice so the next corner advice
+        # acknowledges that something happened, instead of pretending it
+        # didn't.
+        self._recent_advice.append((f"incident.{incident.type}", advice))
+        return self._record_incident(
+            advice,
+            incident,
+            failure_reason,
+            system_prompt=SARCASTIC_SYSTEM_PROMPT,
+            user_prompt=user_prompt,
+        )
+
+    def _record_incident(
+        self,
+        advice: str | None,
+        incident: Incident,
+        reason: str | None,
+        *,
+        system_prompt: str | None = None,
+        user_prompt: str | None = None,
+    ) -> IncidentResult:
+        result = IncidentResult(
+            advice=advice,
+            incident=incident,
+            suppressed_reason=reason,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+        )
+        self.incident_history.append(result)
+        if advice is not None:
+            log.info("coach -> %r (incident=%s sev=%.2f)", advice, incident.type, incident.severity)
+        elif reason:
+            log.warning("incident not voiced (%s): %s", reason, incident.type)
+        return result
+
     def _record(
         self,
         advice: str | None,
@@ -244,4 +356,11 @@ class Advisor:
         return result
 
 
-__all__ = ["G_MS2", "Advisor", "AdvisorConfig", "AdvisorResult", "CornerContext"]
+__all__ = [
+    "G_MS2",
+    "Advisor",
+    "AdvisorConfig",
+    "AdvisorResult",
+    "CornerContext",
+    "IncidentResult",
+]

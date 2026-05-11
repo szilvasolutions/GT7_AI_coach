@@ -97,6 +97,15 @@ class PiperVoiceEngine:
             self._queue.append(text)
         self._wake.set()
 
+    def interrupt(self, text: str) -> None:
+        text = (text or "").strip()
+        if not text:
+            return
+        with self._lock:
+            self._queue.clear()
+            self._queue.append(text)
+        self._wake.set()
+
     def is_idle(self) -> bool:
         with self._lock:
             return not self._queue and not self._busy

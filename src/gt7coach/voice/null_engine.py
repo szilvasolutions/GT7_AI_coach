@@ -16,6 +16,9 @@ class NullVoiceEngine:
     def speak(self, text: str) -> None:
         self.spoken.append(text)
 
+    def interrupt(self, text: str) -> None:
+        self.spoken.append(text)
+
     def is_idle(self) -> bool:
         return not self._busy
 

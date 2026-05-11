@@ -11,6 +11,14 @@ class VoiceEngine(Protocol):
     def speak(self, text: str) -> None:
         """Enqueue ``text`` for speech. Non-blocking."""
 
+    def interrupt(self, text: str) -> None:
+        """Clear any pending utterances and queue ``text`` next.
+
+        Used for important messages (spins, crashes) that should preempt
+        whatever stale coaching tip was queued. Mid-utterance audio is not
+        forcibly aborted — the currently-speaking message finishes first.
+        """
+
     def is_idle(self) -> bool:
         """True when nothing is queued or being spoken right now."""
 

@@ -35,6 +35,7 @@ from gt7coach.detectors import (
     CornerSegmenter,
     CornerTrace,
     Event,
+    IncidentDetector,
     detect_early_lift,
     detect_late_apex,
     detect_late_brake,
@@ -364,11 +365,23 @@ def main(argv: list[str] | None = None) -> int:
     signal.signal(signal.SIGINT, _shutdown)
 
     seg = CornerSegmenter()
+    incident_detector = IncidentDetector()
     corner_idx = 0
     try:
         for packet in stream:
             if session is not None:
                 session.log_packet(packet)
+            # Incidents fire on a single packet; check before corner detection
+            # so a spin during a corner trace interrupts the planned advice.
+            incident = incident_detector.feed(packet)
+            if incident is not None:
+                log.info(
+                    "incident: %s sev=%.2f speed=%.1f km/h",
+                    incident.type,
+                    incident.severity,
+                    incident.evidence.get("speed_kmh", 0.0),
+                )
+                advisor.on_incident(incident)
             trace = seg.feed(packet)
             if trace is None:
                 continue
