@@ -64,14 +64,52 @@ def _load_env(path: Path | None) -> None:
         load_dotenv(path)
 
 
+_PROVIDER_ENV = {
+    "anthropic": "ANTHROPIC_API_KEY",
+    "openai": "OPENAI_API_KEY",
+    "gemini": "GEMINI_API_KEY",
+}
+
+
 def _resolve_api_key(provider: str, explicit: str | None) -> str | None:
     if explicit:
         return explicit
-    return {
-        "anthropic": os.environ.get("ANTHROPIC_API_KEY"),
-        "openai": os.environ.get("OPENAI_API_KEY"),
-        "gemini": os.environ.get("GEMINI_API_KEY"),
-    }.get(provider)
+    env_var = _PROVIDER_ENV.get(provider)
+    return os.environ.get(env_var) if env_var else None
+
+
+def _providers_with_keys() -> list[str]:
+    """Names of providers whose API key is set in the environment, in preference order."""
+    return [name for name, env in _PROVIDER_ENV.items() if os.environ.get(env)]
+
+
+def _select_provider(
+    cli_choice: str | None,
+    config_choice: str,
+    cli_api_key: str | None,
+) -> tuple[str, str]:
+    """Pick a provider name. Returns (chosen, reason) for logging.
+
+    Precedence:
+        1. ``--provider X`` on the CLI -> use X verbatim.
+        2. ``config.yaml`` -> use it if its env key is set, or if it doesn't
+           need one (``ollama``).
+        3. Otherwise pick the first provider that has an API key.
+        4. Last resort: keep the config's choice so the error message is clear.
+    """
+    if cli_choice:
+        return cli_choice, "cli"
+
+    available = _providers_with_keys()
+    no_key_needed = {"ollama", "mock"}
+
+    if config_choice in available or config_choice in no_key_needed or cli_api_key:
+        return config_choice, "config"
+
+    if available:
+        return available[0], f"fallback from {config_choice!r} (no API key)"
+
+    return config_choice, "config (no API keys found — will error)"
 
 
 def _stream_live(args: argparse.Namespace) -> tuple[Iterator[Packet], Receiver | None]:
@@ -87,9 +125,24 @@ def _stream_live(args: argparse.Namespace) -> tuple[Iterator[Packet], Receiver |
 
 
 def _stream_replay(args: argparse.Namespace) -> tuple[Iterator[Packet], None]:
-    path = Path(args.source)
-    if not path.is_file():
-        raise FileNotFoundError(f"replay source not found: {path}")
+    """Open the replay CSV, expanding ``*`` / ``?`` patterns the shell didn't."""
+    raw = args.source
+    if any(ch in raw for ch in "*?["):
+        # PowerShell (and cmd.exe) don't glob arguments the way bash does.
+        # Expand the pattern ourselves so '--source sessions\capture_*.csv' works
+        # the same on every shell.
+        import glob as _glob
+
+        matches = sorted(_glob.glob(raw))
+        if not matches:
+            raise FileNotFoundError(f"no files match pattern: {raw}")
+        path = Path(matches[-1])  # most recent (filenames embed a timestamp)
+        if len(matches) > 1:
+            log.info("pattern %r matched %d files; using most recent: %s", raw, len(matches), path)
+    else:
+        path = Path(raw)
+        if not path.is_file():
+            raise FileNotFoundError(f"replay source not found: {path}")
     return replay_csv(path, realtime=args.realtime), None
 
 
@@ -131,9 +184,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     # Coach flags.
     p.add_argument(
         "--provider",
-        default="anthropic",
+        default=None,
         choices=["anthropic", "openai", "gemini", "ollama", "mock"],
-        help="LLM provider for coaching advice (default: anthropic)",
+        help=(
+            "LLM provider for coaching advice. If omitted, picks whichever "
+            "provider has an API key set in env (preferred order: anthropic, "
+            "openai, gemini), or whatever config.yaml says."
+        ),
     )
     p.add_argument("--model", default=None, help="Override provider's default model")
     p.add_argument("--api-key", default=None, help="Override env-var API key")
@@ -209,13 +266,25 @@ def main(argv: list[str] | None = None) -> int:
         cfg_path = Path("config.yaml")
     cfg = load_config(cfg_path)
 
-    provider_name = args.provider if args.provider != "anthropic" else cfg.coach_provider
+    provider_name, provider_reason = _select_provider(
+        args.provider, cfg.coach_provider, args.api_key
+    )
     model = args.model or cfg.coach_model
     api_key = _resolve_api_key(provider_name, args.api_key)
+    log.info("provider: %s (%s)", provider_name, provider_reason)
     try:
         provider = make_provider(provider_name, api_key=api_key, model=model)
     except Exception as exc:
         log.error("provider setup failed: %s", exc)
+        hint = _providers_with_keys()
+        if hint:
+            log.error("hint: detected keys for %s; try --provider %s", hint, hint[0])
+        else:
+            log.error(
+                "hint: no API keys found in env. Set GEMINI_API_KEY / "
+                "ANTHROPIC_API_KEY / OPENAI_API_KEY in .env, "
+                "or use --provider ollama / mock"
+            )
         return 2
 
     voice_name = args.voice if args.voice != "pyttsx3" else cfg.voice.engine
