@@ -102,9 +102,16 @@ def _build_traces_and_events() -> list[tuple[object, list[Event]]]:
 
 
 def test_advisor_emits_advice_for_highest_severity_event() -> None:
-    provider = MockProvider(
-        responder=lambda evts, ctx, style: f"Brake earlier (event={evts[0].type})",
-    )
+    def responder(_sys: str, user: str) -> str:
+        # Pull the first event type out of the user prompt so the test can
+        # assert that the advice is keyed to the right detector.
+        for line in user.splitlines():
+            if line.startswith("- "):
+                kind = line.split(" ", 2)[1]
+                return f"Brake earlier (event={kind})"
+        return "Brake earlier"
+
+    provider = MockProvider(responder=responder)
     voice = NullVoiceEngine()
     advisor = Advisor(
         provider=provider,
@@ -125,7 +132,7 @@ def test_advisor_emits_advice_for_highest_severity_event() -> None:
 
 
 def test_advisor_respects_voice_busy() -> None:
-    provider = MockProvider(responder=lambda e, c, s: "stay on it")
+    provider = MockProvider(responder=lambda _s, _u: "stay on it")
     voice = NullVoiceEngine()
     voice.set_busy(True)  # simulate previous utterance still playing
     advisor = Advisor(
@@ -145,7 +152,7 @@ def test_advisor_respects_voice_busy() -> None:
 
 
 def test_advisor_respects_rate_limiter() -> None:
-    provider = MockProvider(responder=lambda e, c, s: "go")
+    provider = MockProvider(responder=lambda _s, _u: "go")
     voice = NullVoiceEngine()
     rl = RateLimiter(RateLimiterConfig(global_cooldown_s=4.0, duplicate_window_s=30.0))
     advisor = Advisor(provider=provider, voice=voice, rate_limiter=rl)
@@ -168,7 +175,7 @@ def test_advisor_respects_rate_limiter() -> None:
 
 
 def test_advisor_returns_no_op_on_provider_error() -> None:
-    def boom(_e, _c, _s):
+    def boom(_s: str, _u: str) -> str:
         raise ProviderError("boom")
 
     provider = MockProvider(responder=boom)
