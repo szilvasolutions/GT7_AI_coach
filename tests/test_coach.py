@@ -117,7 +117,7 @@ def test_advisor_emits_advice_for_highest_severity_event() -> None:
         provider=provider,
         voice=voice,
         rate_limiter=RateLimiter(RateLimiterConfig(global_cooldown_s=0.0, duplicate_window_s=0.0)),
-        config=AdvisorConfig(driver_style="smooth", min_severity=0.0),
+        config=AdvisorConfig(driver_style="smooth", min_severity=0.0, async_mode=False),
     )
 
     for trace, events in _build_traces_and_events():
@@ -139,6 +139,7 @@ def test_advisor_respects_voice_busy() -> None:
         provider=provider,
         voice=voice,
         rate_limiter=RateLimiter(RateLimiterConfig(global_cooldown_s=0.0)),
+        config=AdvisorConfig(async_mode=False),
     )
     evt = Event(type="braking.late_brake", severity=0.8, t_offset=0.0)
     trace_and_events = next(iter(_build_traces_and_events()), None)
@@ -155,7 +156,9 @@ def test_advisor_respects_rate_limiter() -> None:
     provider = MockProvider(responder=lambda _s, _u: "go")
     voice = NullVoiceEngine()
     rl = RateLimiter(RateLimiterConfig(global_cooldown_s=4.0, duplicate_window_s=30.0))
-    advisor = Advisor(provider=provider, voice=voice, rate_limiter=rl)
+    advisor = Advisor(
+        provider=provider, voice=voice, rate_limiter=rl, config=AdvisorConfig(async_mode=False)
+    )
     trace, _ = next(iter(_build_traces_and_events()))
     evt_a = Event(type="braking.late_brake", severity=0.8, t_offset=0.0)
     evt_b = Event(type="throttle.wheelspin", severity=0.8, t_offset=0.0)
@@ -186,6 +189,7 @@ def test_advisor_falls_back_to_canned_phrase_on_provider_error() -> None:
         provider=provider,
         voice=voice,
         rate_limiter=RateLimiter(RateLimiterConfig(global_cooldown_s=0.0)),
+        config=AdvisorConfig(async_mode=False),
     )
     trace, _ = next(iter(_build_traces_and_events()))
     evt = Event(type="braking.late_brake", severity=0.5, t_offset=0.0)
@@ -207,6 +211,7 @@ def test_advisor_no_op_when_event_type_has_no_fallback() -> None:
         provider=provider,
         voice=voice,
         rate_limiter=RateLimiter(RateLimiterConfig(global_cooldown_s=0.0)),
+        config=AdvisorConfig(async_mode=False),
     )
     trace, _ = next(iter(_build_traces_and_events()))
     evt = Event(type="unknown.event", severity=0.5, t_offset=0.0)

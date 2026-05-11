@@ -224,7 +224,7 @@ def _make_advisor(provider):
         provider=provider,
         voice=NullVoiceEngine(),
         rate_limiter=RateLimiter(RateLimiterConfig(global_cooldown_s=0.0, duplicate_window_s=0.0)),
-        config=AdvisorConfig(driver_style="smooth"),
+        config=AdvisorConfig(driver_style="smooth", async_mode=False),
     )
 
 
@@ -264,7 +264,7 @@ def test_advisor_skips_llm_when_max_severity_below_threshold() -> None:
         provider=provider,
         voice=voice,
         rate_limiter=RateLimiter(RateLimiterConfig(global_cooldown_s=0.0, duplicate_window_s=0.0)),
-        config=AdvisorConfig(driver_style="smooth", min_severity=0.30),
+        config=AdvisorConfig(driver_style="smooth", min_severity=0.30, async_mode=False),
     )
     pkts = [make_packet(packet_id=i, recv_time=i * 0.02, speed_kmh=100) for i in range(50)]
     trace = _trace(pkts)
@@ -295,7 +295,7 @@ def test_advisor_falls_back_when_provider_returns_one_word() -> None:
         provider=provider,
         voice=voice,
         rate_limiter=RateLimiter(RateLimiterConfig(global_cooldown_s=0.0, duplicate_window_s=0.0)),
-        config=AdvisorConfig(min_severity=0.0),
+        config=AdvisorConfig(min_severity=0.0, async_mode=False),
     )
     pkts = [make_packet(packet_id=i, recv_time=i * 0.02, speed_kmh=100) for i in range(50)]
     trace = _trace(pkts)
