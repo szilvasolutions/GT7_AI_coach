@@ -111,36 +111,87 @@ def _summarise_evidence(evidence: dict) -> str:
     return ", ".join(parts)
 
 
+def _format_lap_time(ms: int) -> str:
+    if ms <= 0:
+        return ""
+    total_s = ms / 1000.0
+    m = int(total_s // 60)
+    s = total_s - m * 60
+    return f"{m}:{s:06.3f}"
+
+
 def build_user_prompt(
     events: Iterable[Event],
     context: CornerContext,
     driver_style: str,
     *,
     recent_advice: Sequence[tuple[str, str]] | None = None,
+    recent_events: Sequence[tuple[str, str]] | None = None,
 ) -> str:
     """Compose the per-corner user-message body.
 
     Args:
         events: Up to 3 detected events for this corner, severity-sorted.
-        context: Corner-level summary (speed range, peak G, type, etc.).
+        context: Corner-level summary (speed range, peak G, type, gear/RPM
+            at apex, coasting fraction, tyre state, lap context, car class,
+            track shape, etc.).
         driver_style: ``smooth`` / ``aggressive`` / ``learning``.
-        recent_advice: Last few (event_type, advice_text) pairs from this
-            session, so the LLM can vary phrasing across consecutive corners.
+        recent_advice: Last few (event_type, advice_text) pairs spoken this
+            session.
+        recent_events: Last few (corner_type, top_event_type) pairs from
+            previous corners (the fault pattern, separate from the
+            utterances).
     """
     events_lines = "\n".join(
         f"- {e.type} (severity {e.severity:.2f}): {_summarise_evidence(e.evidence)}" for e in events
     )
     style_hint = _STYLE_HINTS.get(driver_style.lower(), "")
-    blocks = [
-        f"Driver style: {driver_style}. {style_hint}",
-        (
-            f"Corner: {context.corner_type}, peak {context.peak_lat_g:.1f}g lat, "
-            f"min speed {context.min_speed_kmh:.0f} km/h, "
-            f"yaw turned {context.total_yaw_deg:.0f}°, "
-            f"duration {context.duration_s:.1f}s."
-        ),
-        f"Detected events:\n{events_lines}",
-    ]
+
+    blocks: list[str] = []
+    if context.track_shape:
+        blocks.append(
+            f"Track context: {context.track_shape}. "
+            "Use this to shape your priorities; never name the track or corners."
+        )
+    if context.car_class:
+        blocks.append(f"Car: {context.car_class}.")
+    blocks.append(f"Driver style: {driver_style}. {style_hint}")
+
+    # Lap context — render only when we have a valid prior lap to talk about.
+    if context.lap_count > 0 and context.last_lap_ms > 0:
+        last_s = _format_lap_time(context.last_lap_ms)
+        if context.best_lap_ms > 0 and context.best_lap_ms != context.last_lap_ms:
+            delta = (context.last_lap_ms - context.best_lap_ms) / 1000.0
+            sign = "+" if delta >= 0 else ""
+            blocks.append(
+                f"Lap {context.lap_count}, last lap {last_s} ({sign}{delta:.2f} vs best)."
+            )
+        else:
+            blocks.append(f"Lap {context.lap_count}, last lap {last_s}.")
+
+    # Corner summary — now richer with gear / rpm / coasting / yaw.
+    corner_line = (
+        f"Corner: {context.corner_type}, peak {context.peak_lat_g:.1f}g lat, "
+        f"min {context.min_speed_kmh:.0f} km/h"
+    )
+    if context.gear_at_apex:
+        corner_line += f" @ gear {context.gear_at_apex} / {context.rpm_at_apex:.0f} rpm"
+    if context.peak_rpm:
+        corner_line += f", peak {context.peak_rpm:.0f} rpm"
+    if context.coasting_fraction > 0.05:
+        corner_line += f", coasted {context.coasting_fraction * 100:.0f}% of corner"
+    corner_line += f", yaw {context.total_yaw_deg:.0f}°, duration {context.duration_s:.1f}s."
+    blocks.append(corner_line)
+
+    if context.tyre_state:
+        blocks.append(f"Tyres: {context.tyre_state}.")
+
+    blocks.append(f"Detected events:\n{events_lines}")
+
+    if recent_events:
+        events_line = ", ".join(f"{ctype}/{etype}" for ctype, etype in recent_events)
+        blocks.append(f"Recent corners (fault pattern): {events_line}.")
+
     if recent_advice:
         recent_lines = "\n".join(f"- [{kind}] {text}" for kind, text in recent_advice)
         blocks.append(
