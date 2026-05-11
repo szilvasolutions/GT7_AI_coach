@@ -256,6 +256,55 @@ def test_advisor_passes_top_3_events_to_provider() -> None:
     assert "braking.late_brake" not in sent
 
 
+def test_advisor_skips_llm_when_max_severity_below_threshold() -> None:
+    """Tiny events shouldn't waste an LLM call -- and shouldn't speak garbage."""
+    provider = MockProvider(responder=lambda _s, _u: "Stay on it.")
+    voice = NullVoiceEngine()
+    advisor = Advisor(
+        provider=provider,
+        voice=voice,
+        rate_limiter=RateLimiter(RateLimiterConfig(global_cooldown_s=0.0, duplicate_window_s=0.0)),
+        config=AdvisorConfig(driver_style="smooth", min_severity=0.30),
+    )
+    pkts = [make_packet(packet_id=i, recv_time=i * 0.02, speed_kmh=100) for i in range(50)]
+    trace = _trace(pkts)
+
+    # Below the gate: no LLM call.
+    res_low = advisor.on_corner(
+        trace, [Event(type="line.late_apex", severity=0.05, t_offset=0.0)], now=0.0
+    )
+    assert res_low.advice is None
+    assert (
+        res_low.suppressed_reason is not None and "below-min-severity" in res_low.suppressed_reason
+    )
+    assert provider.calls == []
+
+    # Above the gate: normal path.
+    res_high = advisor.on_corner(
+        trace, [Event(type="braking.late_brake", severity=0.8, t_offset=0.0)], now=1.0
+    )
+    assert res_high.advice is not None
+    assert len(provider.calls) == 1
+
+
+def test_advisor_falls_back_when_provider_returns_one_word() -> None:
+    """Single-word responses are treated as failures and replaced with the canned phrase."""
+    provider = MockProvider(responder=lambda _s, _u: "Open")  # single word -> rejected
+    voice = NullVoiceEngine()
+    advisor = Advisor(
+        provider=provider,
+        voice=voice,
+        rate_limiter=RateLimiter(RateLimiterConfig(global_cooldown_s=0.0, duplicate_window_s=0.0)),
+        config=AdvisorConfig(min_severity=0.0),
+    )
+    pkts = [make_packet(packet_id=i, recv_time=i * 0.02, speed_kmh=100) for i in range(50)]
+    trace = _trace(pkts)
+    evt = Event(type="line.late_apex", severity=0.5, t_offset=0.0)
+    res = advisor.on_corner(trace, [evt], now=0.0)
+    assert res.advice == "Hit the apex sooner."  # canned phrase for line.late_apex
+    assert res.suppressed_reason is not None and "too-short-response" in res.suppressed_reason
+
+
 def test_advisor_records_recent_advice_and_feeds_it_back() -> None:
     captured: list[str] = []
 

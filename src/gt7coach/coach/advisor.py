@@ -94,6 +94,11 @@ def _top_events(events: list[Event], n: int = _TOP_EVENTS_PER_CORNER) -> list[Ev
 @dataclass(slots=True)
 class AdvisorConfig:
     driver_style: str = "smooth"
+    # Don't waste an LLM call on a corner whose highest-severity event is
+    # this low. Low-severity events tend to produce single-word responses
+    # ("Open") because the model decides there isn't much to say. Below
+    # this threshold the advisor stays silent.
+    min_severity: float = 0.30
 
 
 @dataclass(slots=True)
@@ -145,6 +150,9 @@ class Advisor:
         winner = max(events_list, key=lambda e: e.severity)
         top = _top_events(events_list)
 
+        if winner.severity < self.config.min_severity:
+            return self._record(None, winner, f"below-min-severity ({winner.severity:.2f})")
+
         if not self.rate_limiter.allow(winner.type, now=now):
             return self._record(None, winner, "rate-limited")
 
@@ -169,6 +177,13 @@ class Advisor:
             failure_reason = f"provider-error: {exc}"
 
         advice = (advice or "").strip()
+        # Reject single-word responses (Gemini's lighter models occasionally
+        # emit "Open" / "Carry" / "Brake" alone despite the system prompt).
+        # The canned fallback phrases are all 2+ words so they pass this gate.
+        if advice and len(advice.split()) < 2:
+            log.warning("provider returned single-word response %r; using fallback", advice)
+            failure_reason = f"too-short-response: {advice!r}"
+            advice = ""
         if not advice:
             # Provider failed or returned nothing. Speak the canned phrase
             # for this event type so the driver still gets feedback.

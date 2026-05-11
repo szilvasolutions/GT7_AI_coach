@@ -25,7 +25,9 @@ Hard constraints on the response:
 - ONE full SENTENCE that begins with a verb (Brake, Trail, Ease, Hold,
   Wait, Open, Carry, Add, Lift, Settle, Roll, Square, Straighten, Smooth,
   Apply, Release, Unwind, Patience). Not a phrase, not a label.
-- Maximum 12 words. Aim for 4-8.
+- BETWEEN 4 AND 12 WORDS. Never a single word, never a fragment. "Open"
+  is wrong. "Open the wheel earlier on exit" is right.
+- The sentence must end with a period.
 - Imperative voice ("Brake later", not "You should brake later").
 - Aimed at the upcoming corner; reflects the SPECIFIC event detected.
 - No filler ("good job", "remember to", "try to", "next time").

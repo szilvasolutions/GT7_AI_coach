@@ -134,19 +134,29 @@ class OpenAIProvider:
 class GeminiProvider:
     """Google Gemini via the new ``google-genai`` SDK.
 
-    Two non-obvious things we configure:
+    Three non-obvious things we configure:
 
+    * **Default model is ``gemini-2.5-flash-lite``.** The full ``gemini-2.5-flash``
+      has a 20-requests/day free-tier quota that the coach blows through in a
+      single race; flash-lite has a much higher cap and is what the legacy
+      V23 script used successfully. Quality is sufficient for 4-12 word
+      imperatives.
     * **Permissive safety thresholds.** The racing-coach corpus is benign and
       the default filter occasionally blocks helpful answers on racing verbs
       like "attack" / "punish".
-    * **Thinking tokens disabled.** Gemini 2.5 family models emit internal
-      reasoning tokens BEFORE the visible answer, and that reasoning counts
-      against ``max_output_tokens``. With ``thinking_budget=0`` the model
-      replies immediately, which fixes the "Carry" / "Settle the" truncation
-      we observed in production. Lower latency too.
+    * **Thinking tokens disabled.** Gemini 2.5 family models can emit
+      internal reasoning tokens BEFORE the visible answer; that reasoning
+      counts against ``max_output_tokens``. With ``thinking_budget=0`` the
+      model replies immediately. Lower latency too.
+    * **One automatic retry on 5xx / 429.** Gemini occasionally returns
+      "503 UNAVAILABLE" or "429 RESOURCE_EXHAUSTED" under load. A single
+      ~1 s retry catches the transient case; persistent failures bubble up
+      to the canned-phrase fallback in the advisor.
     """
 
-    DEFAULT_MODEL = "gemini-2.5-flash"
+    DEFAULT_MODEL = "gemini-2.5-flash-lite"
+    _RETRY_STATUS_CODES = (429, 500, 502, 503, 504)
+    _RETRY_DELAY_S = 1.0
 
     def __init__(
         self,
@@ -183,20 +193,35 @@ class GeminiProvider:
 
     def complete(self, system: str, user: str, *, max_tokens: int | None = None) -> str:
         budget = max_tokens if max_tokens is not None else self.max_tokens
-        try:
-            resp = self._client.models.generate_content(
-                model=self.model,
-                contents=user,
-                config=self._types.GenerateContentConfig(
-                    system_instruction=system,
-                    max_output_tokens=budget,
-                    temperature=self.temperature,
-                    safety_settings=self._safety,
-                    thinking_config=self._thinking,
-                ),
-            )
-        except Exception as exc:
-            raise ProviderError(f"gemini call failed: {exc}") from exc
+        config = self._types.GenerateContentConfig(
+            system_instruction=system,
+            max_output_tokens=budget,
+            temperature=self.temperature,
+            safety_settings=self._safety,
+            thinking_config=self._thinking,
+        )
+        last_exc: Exception | None = None
+        for attempt in range(2):  # one retry on transient 5xx / 429
+            try:
+                resp = self._client.models.generate_content(
+                    model=self.model,
+                    contents=user,
+                    config=config,
+                )
+                break
+            except Exception as exc:
+                last_exc = exc
+                if attempt == 0 and self._is_retryable(exc):
+                    log.warning(
+                        "gemini transient error (%s); retrying in %.1fs", exc, self._RETRY_DELAY_S
+                    )
+                    import time
+
+                    time.sleep(self._RETRY_DELAY_S)
+                    continue
+                raise ProviderError(f"gemini call failed: {exc}") from exc
+        else:  # pragma: no cover — for loop exhausted without break
+            raise ProviderError(f"gemini call failed after retries: {last_exc}")
 
         text = (getattr(resp, "text", None) or "").strip()
         if text:
@@ -208,6 +233,15 @@ class GeminiProvider:
         if candidates:
             finish_reason = getattr(candidates[0], "finish_reason", None)
         raise ProviderError(f"gemini returned no text (finish_reason={finish_reason!r})")
+
+    @classmethod
+    def _is_retryable(cls, exc: Exception) -> bool:
+        """Heuristic: status_code attr or 'XXX' substring in the message."""
+        status = getattr(exc, "status_code", None) or getattr(exc, "code", None)
+        if isinstance(status, int) and status in cls._RETRY_STATUS_CODES:
+            return True
+        msg = str(exc)
+        return any(f"{code}" in msg for code in cls._RETRY_STATUS_CODES)
 
 
 class OllamaProvider:

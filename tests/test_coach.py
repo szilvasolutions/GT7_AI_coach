@@ -117,7 +117,7 @@ def test_advisor_emits_advice_for_highest_severity_event() -> None:
         provider=provider,
         voice=voice,
         rate_limiter=RateLimiter(RateLimiterConfig(global_cooldown_s=0.0, duplicate_window_s=0.0)),
-        config=AdvisorConfig(driver_style="smooth"),
+        config=AdvisorConfig(driver_style="smooth", min_severity=0.0),
     )
 
     for trace, events in _build_traces_and_events():
