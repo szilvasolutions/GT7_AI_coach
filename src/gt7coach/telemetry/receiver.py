@@ -190,6 +190,16 @@ class Receiver:
 
     def packets(self) -> Iterator[Packet]:
         """Yield :class:`Packet` objects until :meth:`stop` is called."""
+        for _raw, pkt in self.frames():
+            yield pkt
+
+    def frames(self) -> Iterator[tuple[bytes, Packet]]:
+        """Yield ``(decrypted_bytes, Packet)`` pairs until :meth:`stop` is called.
+
+        Useful for capture tooling that wants to persist the raw decrypted
+        payload alongside the parsed view (so unknown offsets can be analysed
+        later without another live session).
+        """
         if self._sock is None:
             self.start()
         assert self._sock is not None
@@ -208,9 +218,11 @@ class Receiver:
                 continue
             try:
                 decrypted = decrypt_packet(data, fmt=self.cfg.packet_format)
-                yield parse_packet(decrypted, recv_time=monotonic())
+                pkt = parse_packet(decrypted, recv_time=monotonic())
             except (ValueError, IndexError) as exc:
                 log.warning("packet parse failed: %s", exc)
+                continue
+            yield decrypted, pkt
 
     def run(self, on_packet: Callable[[Packet], None]) -> None:
         """Drive the receive loop, invoking ``on_packet`` for each frame."""
