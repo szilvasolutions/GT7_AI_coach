@@ -23,10 +23,15 @@ import logging
 import random
 import threading
 from collections import deque
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 
-from gt7coach.coach.prompt import SARCASTIC_SYSTEM_PROMPT, SYSTEM_PROMPT, build_user_prompt
+from gt7coach.coach.prompt import (
+    COMPLIMENT_SYSTEM_PROMPT,
+    SARCASTIC_SYSTEM_PROMPT,
+    SYSTEM_PROMPT,
+    build_user_prompt,
+)
 from gt7coach.coach.providers import CoachProvider, ProviderError
 from gt7coach.coach.rate_limiter import RateLimiter
 from gt7coach.detectors import CornerTrace, Event, Incident
@@ -39,6 +44,13 @@ _TOP_EVENTS_PER_CORNER = 3
 _RECENT_ADVICE_DEPTH = 3
 _RECENT_EVENTS_DEPTH = 3
 _WORKER_JOIN_TIMEOUT_S = 15.0
+
+# Callback signature for AdvisorResult / IncidentResult delivery. Invoked
+# AFTER the result is finalised (which may be on the worker thread for
+# corners), so external observers — like the SessionLogger — see the
+# actual advice / prompt / failure_reason instead of the synchronous
+# "queued" stub the caller of on_corner() received.
+ResultCallback = Callable[[int, "CornerTrace | None", "AdvisorResult | IncidentResult"], None]
 
 
 # ---- Canned fallbacks -------------------------------------------------------
@@ -54,7 +66,19 @@ _FALLBACK_PHRASES: dict[str, str] = {
     "steering.understeer": "Less steering, more patience.",
     "steering.oversteer": "Counter and ease off.",
     "line.late_apex": "Hit the apex sooner.",
+    # Positive-feedback fallbacks. Multiple per type so a string of clean
+    # corners doesn't sound robotic.
+    "quality.clean_corner": "Tidy through that one.",
 }
+
+
+_COMPLIMENT_FALLBACKS: tuple[str, ...] = (
+    "Hooked up nicely through that one.",
+    "Clean line, plenty of speed.",
+    "Solid commitment there.",
+    "Tidy through that corner.",
+    "Strong, that's the way.",
+)
 
 
 def fallback_phrase(event_type: str) -> str:
@@ -68,6 +92,13 @@ _INCIDENT_FALLBACKS: dict[str, tuple[str, ...]] = {
         "Just doing some gardening, then.",
         "Right, who taught you to drive?",
         "That'll do, pirouette.",
+    ),
+    "slide": (
+        "Skating, are we?",
+        "Off-line. Tidy that up.",
+        "Wheels need the road.",
+        "Found the grass.",
+        "Saved it. Sort of.",
     ),
     "crash": (
         "That'll buff right out.",
@@ -204,8 +235,14 @@ class IncidentResult:
 
 @dataclass(slots=True)
 class _PendingJob:
-    """One queued corner waiting on the LLM worker."""
+    """One queued corner waiting on the LLM worker.
 
+    ``corner_idx`` is preserved so the eventual ``AdvisorResult`` can be
+    correlated with the corresponding entry in the session log even after
+    the receive loop has moved on to later corners.
+    """
+
+    corner_idx: int
     trace: CornerTrace
     events: list[Event]
     winner: Event
@@ -226,6 +263,7 @@ class Advisor:
         voice: VoiceEngine,
         rate_limiter: RateLimiter,
         config: AdvisorConfig | None = None,
+        on_result: ResultCallback | None = None,
     ) -> None:
         self.provider = provider
         self.voice = voice
@@ -233,6 +271,11 @@ class Advisor:
         self.config = config or AdvisorConfig()
         self.history: list[AdvisorResult] = []
         self.incident_history: list[IncidentResult] = []
+        # Callback invoked AFTER an AdvisorResult is finalised — including
+        # asynchronously from the worker thread. SessionLogger uses this to
+        # write the actual LLM advice/prompt/response to coach.jsonl instead
+        # of the synchronous "queued" stub.
+        self._on_result = on_result
         # Session-level state surfaced to the prompt:
         self._best_lap_ms: int = -1
         self._recent_advice: deque[tuple[str, str]] = deque(maxlen=_RECENT_ADVICE_DEPTH)
@@ -267,39 +310,54 @@ class Advisor:
         events: Iterable[Event],
         *,
         now: float | None = None,
+        corner_idx: int = 0,
     ) -> AdvisorResult:
-        """Schedule (or run) coaching for one corner."""
+        """Schedule (or run) coaching for one corner.
+
+        ``corner_idx`` is threaded through to the on_result callback so the
+        SessionLogger can correlate the async result with the right entry.
+        """
         events_list = list(events)
         if not events_list:
-            # Don't even hold the rate-limiter; zero-event corners are just
-            # exit-acceleration phases or fast sweepers and have nothing to say.
-            return self._record(None, None, "no events")
+            return self._record(None, None, "no events", corner_idx=corner_idx, trace=trace)
 
         winner = max(events_list, key=lambda e: e.severity)
         top = _top_events(events_list)
 
-        if winner.severity < self.config.min_severity:
-            return self._record(None, winner, f"below-min-severity ({winner.severity:.2f})")
+        # Quality (positive-feedback) events bypass the min_severity gate —
+        # they intentionally use a fixed-low severity (~0.15) so they don't
+        # outrank real corrective events, but we still want to compliment
+        # the driver when they nail a corner.
+        is_compliment = winner.type.startswith("quality.")
+        if not is_compliment and winner.severity < self.config.min_severity:
+            return self._record(
+                None,
+                winner,
+                f"below-min-severity ({winner.severity:.2f})",
+                corner_idx=corner_idx,
+                trace=trace,
+            )
 
-        # Update best-lap memory before we gate (so even rate-limited corners
-        # contribute to context for the next one).
         last_lap = trace.last_lap_ms
         if last_lap > 0 and (self._best_lap_ms < 0 or last_lap < self._best_lap_ms):
             self._best_lap_ms = last_lap
 
         if not self.rate_limiter.allow(winner.type, now=now):
-            return self._record(None, winner, "rate-limited")
+            return self._record(None, winner, "rate-limited", corner_idx=corner_idx, trace=trace)
 
-        # voice-busy check is a *quick* signal: if a previous utterance is
-        # still playing, skip this corner — the next one will get its shot.
         if not self.voice.is_idle():
-            return self._record(None, winner, "voice-busy")
+            return self._record(None, winner, "voice-busy", corner_idx=corner_idx, trace=trace)
 
-        job = _PendingJob(trace=trace, events=events_list, winner=winner, top=top, now=now)
+        job = _PendingJob(
+            corner_idx=corner_idx,
+            trace=trace,
+            events=events_list,
+            winner=winner,
+            top=top,
+            now=now,
+        )
         if self._worker_thread is None:
-            # Synchronous path (tests, --no-async).
             return self._process_job(job)
-        # Async path: drop-newest semantics.
         with self._pending_lock:
             replaced = self._pending is not None
             self._pending = job
@@ -307,7 +365,12 @@ class Advisor:
             log.info("worker still busy; replacing pending corner with newer one")
         self._worker_idle.clear()
         self._wake.set()
-        return self._record(None, winner, "queued")
+        # Synchronous stub for the caller. The worker will fire the on_result
+        # callback when it actually finishes; that's the result that gets
+        # logged with the prompt + response.
+        stub = AdvisorResult(advice=None, chosen_event=winner, suppressed_reason="queued")
+        self.history.append(stub)
+        return stub
 
     def on_incident(self, incident: Incident) -> IncidentResult:
         """Speak a sarcastic remark for a spin / crash. Synchronous on purpose."""
@@ -396,9 +459,12 @@ class Advisor:
             recent_advice=list(self._recent_advice),
             recent_events=list(self._recent_events),
         )
+        # Route to the compliment system prompt for positive-feedback events.
+        is_compliment = job.winner.type.startswith("quality.")
+        system_prompt = COMPLIMENT_SYSTEM_PROMPT if is_compliment else SYSTEM_PROMPT
 
         try:
-            advice = self.provider.complete(SYSTEM_PROMPT, user_prompt)
+            advice = self.provider.complete(system_prompt, user_prompt)
             failure_reason: str | None = None
         except ProviderError as exc:
             log.warning("provider failed: %s — falling back to canned phrase", exc)
@@ -411,14 +477,19 @@ class Advisor:
             failure_reason = f"too-short-response: {advice!r}"
             advice = ""
         if not advice:
-            advice = fallback_phrase(job.winner.type)
+            if is_compliment:
+                advice = random.choice(_COMPLIMENT_FALLBACKS)
+            else:
+                advice = fallback_phrase(job.winner.type)
             if not advice:
                 return self._record(
                     None,
                     job.winner,
                     failure_reason or "empty-response",
-                    system_prompt=SYSTEM_PROMPT,
+                    system_prompt=system_prompt,
                     user_prompt=user_prompt,
+                    corner_idx=job.corner_idx,
+                    trace=job.trace,
                 )
             failure_reason = f"{failure_reason or 'empty-response'}; spoke fallback"
 
@@ -430,8 +501,10 @@ class Advisor:
             advice,
             job.winner,
             failure_reason,
-            system_prompt=SYSTEM_PROMPT,
+            system_prompt=system_prompt,
             user_prompt=user_prompt,
+            corner_idx=job.corner_idx,
+            trace=job.trace,
         )
 
     # ---- result bookkeeping --------------------------------------------
@@ -453,6 +526,13 @@ class Advisor:
             user_prompt=user_prompt,
         )
         self.incident_history.append(result)
+        if self._on_result is not None:
+            try:
+                # Incidents aren't tied to a corner_idx; use 0 as a sentinel
+                # and pass None for the trace.
+                self._on_result(0, None, result)
+            except Exception as exc:  # pragma: no cover
+                log.exception("on_result callback raised: %s", exc)
         if advice is not None:
             log.info("coach -> %r (incident=%s sev=%.2f)", advice, incident.type, incident.severity)
         elif reason:
@@ -467,6 +547,8 @@ class Advisor:
         *,
         system_prompt: str | None = None,
         user_prompt: str | None = None,
+        corner_idx: int = 0,
+        trace: CornerTrace | None = None,
     ) -> AdvisorResult:
         result = AdvisorResult(
             advice=advice,
@@ -476,6 +558,11 @@ class Advisor:
             user_prompt=user_prompt,
         )
         self.history.append(result)
+        if self._on_result is not None:
+            try:
+                self._on_result(corner_idx, trace, result)
+            except Exception as exc:  # pragma: no cover — observer shouldn't break the worker
+                log.exception("on_result callback raised: %s", exc)
         if advice is not None:
             log.info(
                 "coach -> %r (event=%s sev=%.2f)",

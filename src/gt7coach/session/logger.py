@@ -29,7 +29,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import IO, Any
 
-from gt7coach.coach.advisor import AdvisorResult, CornerContext
+from gt7coach.coach.advisor import AdvisorResult, CornerContext, IncidentResult
 from gt7coach.detectors import CornerTrace, Event
 from gt7coach.telemetry.packet import Packet
 
@@ -104,6 +104,11 @@ class SessionLogger:
         self._corner_count = 0
         self._event_count = 0
         self._advice_count = 0
+        self._incident_count = 0
+        # corner_idx -> trace, kept so async results from the worker can be
+        # logged with the right corner context after the receive loop has
+        # already moved on.
+        self._traces_by_idx: dict[int, CornerTrace] = {}
 
         log.info("session log: %s", self.dir)
 
@@ -115,6 +120,9 @@ class SessionLogger:
 
     def log_corner(self, corner_idx: int, trace: CornerTrace, events: list[Event]) -> None:
         self._corner_count = max(self._corner_count, corner_idx)
+        # Keep the trace around so the async advisor result can be logged
+        # with the right corner context later. Cleared in on_advisor_result.
+        self._traces_by_idx[corner_idx] = trace
         record = {
             "corner_idx": corner_idx,
             "wall_time": datetime.now().isoformat(timespec="milliseconds"),
@@ -124,6 +132,53 @@ class SessionLogger:
         self._events_fh.write(json.dumps(record) + "\n")
         self._events_fh.flush()
         self._event_count += len(events)
+
+    def on_advisor_result(
+        self,
+        corner_idx: int,
+        trace: CornerTrace | None,
+        result: AdvisorResult | IncidentResult,
+    ) -> None:
+        """Callback registered on the Advisor — fired from the worker thread.
+
+        Logs the FINAL result (with prompt + response) instead of the
+        synchronous "queued" stub that the receive loop saw.
+        """
+        if isinstance(result, IncidentResult):
+            self._log_incident_result(result)
+            return
+        # AdvisorResult — falls back to the cached trace if the worker
+        # already removed it from our map (shouldn't happen but be safe).
+        resolved_trace = trace or self._traces_by_idx.pop(corner_idx, None)
+        if resolved_trace is None:
+            log.debug("on_advisor_result for corner %d with no trace cached", corner_idx)
+            return
+        self.log_advisor(corner_idx, resolved_trace, result)
+        self._traces_by_idx.pop(corner_idx, None)
+
+    def _log_incident_result(self, result: IncidentResult) -> None:
+        record = {
+            "wall_time": datetime.now().isoformat(timespec="milliseconds"),
+            "incident": {
+                "type": result.incident.type,
+                "severity": result.incident.severity,
+                "recv_time": result.incident.recv_time,
+                "evidence": result.incident.evidence,
+            },
+            "advice": result.advice,
+            "suppressed_reason": result.suppressed_reason,
+            "prompt": {
+                "system": result.system_prompt,
+                "user": result.user_prompt,
+            }
+            if result.user_prompt is not None
+            else None,
+        }
+        self._coach_fh.write(json.dumps(record) + "\n")
+        self._coach_fh.flush()
+        self._incident_count += 1
+        if result.advice is not None:
+            self._advice_count += 1
 
     def log_advisor(
         self,
@@ -171,6 +226,7 @@ class SessionLogger:
                 "corners": self._corner_count,
                 "events": self._event_count,
                 "advice_spoken": self._advice_count,
+                "incidents": self._incident_count,
             },
             "files": {
                 "telemetry_csv": self._telemetry_path.name,

@@ -119,7 +119,7 @@ def _make_advisor(provider):
         provider=provider,
         voice=NullVoiceEngine(),
         rate_limiter=RateLimiter(RateLimiterConfig(global_cooldown_s=0.0, duplicate_window_s=0.0)),
-        config=AdvisorConfig(driver_style="smooth", min_severity=0.0),
+        config=AdvisorConfig(driver_style="smooth", min_severity=0.0, async_mode=False),
     )
 
 

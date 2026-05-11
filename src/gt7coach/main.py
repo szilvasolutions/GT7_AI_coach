@@ -30,12 +30,14 @@ from gt7coach.coach import (
     RateLimiterConfig,
     make_provider,
 )
+from gt7coach.coach.laps import LapTracker
 from gt7coach.config import load as load_config
 from gt7coach.detectors import (
     CornerSegmenter,
     CornerTrace,
     Event,
     IncidentDetector,
+    detect_clean_corner,
     detect_early_lift,
     detect_late_apex,
     detect_late_brake,
@@ -159,6 +161,9 @@ def _run_detectors(trace: CornerTrace) -> list[Event]:
     events += detect_understeer(trace)
     events += detect_oversteer(trace)
     events += detect_late_apex(trace)
+    # Positive-feedback detector runs LAST and only fires when nothing else
+    # did — it explicitly looks at the other events.
+    events += detect_clean_corner(trace, other_events=events)
     return events
 
 
@@ -341,21 +346,6 @@ def main(argv: list[str] | None = None) -> int:
         else cfg.advisor.driver_style,
         car_class=car_class,
     )
-    advisor = Advisor(
-        provider=provider,
-        voice=voice,
-        rate_limiter=RateLimiter(rate_limiter_cfg),
-        config=advisor_cfg,
-    )
-
-    # Audible startup confirmation: if the user can hear "Coach ready" they
-    # know the audio pipeline works before they wait for a corner event.
-    if voice_name != "null":
-        try:
-            voice.speak("Coach ready.")
-        except Exception:  # pragma: no cover — non-fatal
-            pass
-
     if args.source == "live":
         stream, rx = _stream_live(args)
     else:
@@ -364,10 +354,27 @@ def main(argv: list[str] | None = None) -> int:
     session: SessionLogger | None = None
     if not args.no_log:
         session = SessionLogger(args.log_dir, cli_args=vars(args).copy())
-        # Path objects aren't JSON-serialisable; stringify the few that snuck in.
         for k, v in list(session._cli_args.items()):
             if isinstance(v, Path):
                 session._cli_args[k] = str(v)
+
+    # SessionLogger registers as the Advisor's on_result callback so the
+    # async worker's final AdvisorResult / IncidentResult is what hits
+    # coach.jsonl — not the synchronous "queued" stub.
+    advisor = Advisor(
+        provider=provider,
+        voice=voice,
+        rate_limiter=RateLimiter(rate_limiter_cfg),
+        config=advisor_cfg,
+        on_result=session.on_advisor_result if session is not None else None,
+    )
+
+    # Audible startup confirmation.
+    if voice_name != "null":
+        try:
+            voice.speak("Coach ready.")
+        except Exception:  # pragma: no cover — non-fatal
+            pass
 
     def _shutdown(_signum: int, _frame: FrameType | None) -> None:
         log.info("shutdown signal — draining")
@@ -380,6 +387,11 @@ def main(argv: list[str] | None = None) -> int:
     seg = CornerSegmenter()
     incident_detector = IncidentDetector()
     track_detector = TrackDetector()
+    lap_tracker = LapTracker(
+        provider=provider,
+        voice=voice,
+        driver_style=advisor_cfg.driver_style,
+    )
     # CLI / config track override happens once at startup.
     forced_track = args.track or cfg.coach_track
     if forced_track:
@@ -394,13 +406,15 @@ def main(argv: list[str] | None = None) -> int:
         for packet in stream:
             if session is not None:
                 session.log_packet(packet)
-            # Try to pin down the track from world coordinates if we haven't
-            # yet. The detector is internally idempotent once chosen / given
-            # up, so the call cost is negligible.
+            # Track detector wants every packet (it maintains a position
+            # buffer for sequence matching).
             if track_detector.track is None:
                 tr = track_detector.feed(packet)
                 if tr is not None:
                     advisor.set_track_shape(tr.shape_description)
+            else:
+                track_detector.feed(packet)  # keeps the sticky-release timer fresh
+            lap_tracker.feed_packet(packet)
             # Incidents fire on a single packet; check before corner detection
             # so a spin during a corner trace interrupts the planned advice.
             incident = incident_detector.feed(packet)
@@ -429,18 +443,15 @@ def main(argv: list[str] | None = None) -> int:
             )
             if session is not None:
                 session.log_corner(corner_idx, trace, events)
-            result = advisor.on_corner(trace, events)
-            if session is not None:
-                session.log_advisor(corner_idx, trace, result)
+            lap_tracker.feed_events(events)
+            advisor.on_corner(trace, events, corner_idx=corner_idx)
         trailing = seg.flush()
         if trailing is not None:
             corner_idx += 1
             trailing_events = _run_detectors(trailing)
             if session is not None:
                 session.log_corner(corner_idx, trailing, trailing_events)
-            result = advisor.on_corner(trailing, trailing_events)
-            if session is not None:
-                session.log_advisor(corner_idx, trailing, result)
+            advisor.on_corner(trailing, trailing_events, corner_idx=corner_idx)
     finally:
         if rx is not None:
             rx.stop()
