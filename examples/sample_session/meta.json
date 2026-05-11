@@ -1,0 +1,45 @@
+{
+  "started_at": "2026-05-11T21:04:17",
+  "ended_at": "2026-05-11T21:07:53",
+  "duration_s": 216.193245,
+  "host": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.10",
+    "node": "Szilvasurface"
+  },
+  "cli_args": {
+    "source": "live",
+    "realtime": false,
+    "ip": "auto",
+    "format": "B",
+    "port_rx": 33740,
+    "port_tx": 33739,
+    "provider": null,
+    "model": null,
+    "api_key": null,
+    "driver_style": "smooth",
+    "cooldown": 4.0,
+    "car_class": "Gr.3 RWD",
+    "track": null,
+    "voice": "pyttsx3",
+    "voice_rate": 230,
+    "log_dir": "sessions",
+    "no_log": false,
+    "summary": true,
+    "no_summary": false,
+    "config": "config.yaml",
+    "env_file": null,
+    "verbose": false
+  },
+  "totals": {
+    "packets": 12958,
+    "corners": 25,
+    "events": 51,
+    "advice_spoken": 0
+  },
+  "files": {
+    "telemetry_csv": "telemetry.csv",
+    "events_jsonl": "events.jsonl",
+    "coach_jsonl": "coach.jsonl"
+  }
+}

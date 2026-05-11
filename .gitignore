@@ -9,6 +9,7 @@
 sessions/
 *.csv
 !tests/fixtures/*.csv
+!examples/**/*.csv
 *.gtr
 *.gtz
 
