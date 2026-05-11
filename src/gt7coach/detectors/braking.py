@@ -1,6 +1,6 @@
 """Braking detectors.
 
-Ships ``late_brake`` and ``lockup``. ``trail_off_too_fast`` remains Phase 4.
+Ships ``late_brake``, ``lockup``, and ``trail_off_too_fast``.
 """
 
 from __future__ import annotations
@@ -147,3 +147,77 @@ def detect_lockup(trace: CornerTrace, *, config: LockupConfig | None = None) -> 
 
     close_streak()
     return events
+
+
+@dataclass(slots=True)
+class TrailOffConfig:
+    """Tunable thresholds for the trail-off-too-fast detector."""
+
+    min_peak_brake: int = 120  # ignore non-braking corners
+    min_lat_g: float = 0.60  # release must happen while still cornering
+    # "Too fast" = the brake pedal drops faster than ``release_rate_threshold``
+    # units (0..255) per second at any single tick while still under load.
+    release_rate_threshold: float = 1500.0
+    full_severity_rate: float = 5000.0
+
+
+def detect_trail_off_too_fast(
+    trace: CornerTrace, *, config: TrailOffConfig | None = None
+) -> list[Event]:
+    """Brake released too fast while still loaded laterally.
+
+    In a smooth trail-brake the driver eases off as the car rotates, gradually
+    transferring weight forward as lateral grip builds. A "stab and release"
+    pattern (brake stays planted then drops to zero in 1-2 frames) destabilises
+    the front axle right when it needs the load most.
+
+    Implementation: find the peak per-tick brake release rate (drop in brake
+    units divided by inter-frame dt), gated to ticks where the car was still
+    loaded laterally. If the peak rate exceeds the threshold, fire once.
+    Severity scales linearly from 0 at the threshold to 1 at
+    ``full_severity_rate``.
+    """
+    cfg = config or TrailOffConfig()
+    packets = trace.packets
+    if len(packets) < 4:
+        return []
+
+    if max(p.brake for p in packets) < cfg.min_peak_brake:
+        return []
+
+    best_rate = 0.0
+    best_idx: int | None = None
+    best_drop = 0
+    for i in range(1, len(packets)):
+        dt = packets[i].recv_time - packets[i - 1].recv_time
+        if dt <= 0:
+            continue
+        drop = packets[i - 1].brake - packets[i].brake
+        if drop <= 0:
+            continue
+        lat_g = abs(packets[i].accel_lat or 0.0) / 9.80665
+        if lat_g < cfg.min_lat_g:
+            continue
+        rate = drop / dt
+        if rate > best_rate:
+            best_rate = rate
+            best_idx = i
+            best_drop = drop
+
+    if best_idx is None or best_rate < cfg.release_rate_threshold:
+        return []
+
+    span = max(cfg.full_severity_rate - cfg.release_rate_threshold, 1e-6)
+    severity = min(1.0, (best_rate - cfg.release_rate_threshold) / span)
+    return [
+        Event(
+            type="braking.trail_off_too_fast",
+            severity=severity,
+            t_offset=packets[best_idx].recv_time - trace.start_time,
+            evidence={
+                "peak_release_rate": round(best_rate, 1),
+                "drop_in_one_tick": int(best_drop),
+                "lat_g_at_release": round(abs(packets[best_idx].accel_lat or 0.0) / 9.80665, 2),
+            },
+        )
+    ]
