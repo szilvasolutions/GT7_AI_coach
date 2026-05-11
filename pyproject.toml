@@ -35,6 +35,9 @@ dev = [
 Homepage = "https://github.com/szilvasolutions/GT7_AI_coach"
 Issues = "https://github.com/szilvasolutions/GT7_AI_coach/issues"
 
+[project.scripts]
+gt7coach-capture = "gt7coach.capture:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
