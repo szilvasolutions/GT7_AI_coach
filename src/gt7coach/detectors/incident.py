@@ -36,13 +36,24 @@ class Incident:
 
 @dataclass(slots=True)
 class IncidentDetectorConfig:
-    # Spin: car rotating much faster than any normal cornering would explain.
+    # Spin (rotation): car rotating much faster than any normal cornering
+    # would explain.
     spin_yaw_rate_rad_s: float = 2.5  # ~143°/s; well above any clean cornering
     spin_min_speed_kmh: float = 20.0  # below this you might be parking
-    spin_min_duration_s: float = 0.15  # avoid catching one-frame noise
+    spin_min_duration_s: float = 0.08  # 0.15 missed brief 180° spins
+
+    # Slide-out: the car is sliding sideways without much rotation. The
+    # wheels spin (rear/front speed ratio shoots up) and the car decelerates
+    # hard but the yaw rate doesn't break the rotational threshold. Catches
+    # the "off-track, all four wheels skating" scenario.
+    slide_ratio_threshold: float = 1.6  # rear_wheel_rps / front_wheel_rps
+    slide_min_speed_kmh: float = 25.0  # ignore at parking speeds
+    slide_max_speed_kmh: float = 90.0  # high-speed wheelspin during exit is NOT a slide
+    slide_min_speed_drop_kmh: float = 30.0  # speed must have dropped this much in the last window
+    slide_drop_window_s: float = 1.0
 
     # Crash: massive instantaneous G spike (impact).
-    crash_g_threshold: float = 4.0  # ~40 m/s²; clean racing rarely exceeds 2.5 g
+    crash_g_threshold: float = 4.0
     crash_min_speed_kmh: float = 15.0
 
     # Cooldown so one event doesn't fire 20 times.
@@ -66,8 +77,17 @@ class IncidentDetector:
         self.config = config or IncidentDetectorConfig()
         self._last_emit_t: float = -1e9
         self._spin_streak_started: float | None = None
+        # Small ring buffer of (recv_time, speed_kmh) for the slide detector.
+        # Sized to cover slide_drop_window_s at 60 Hz with some slack.
+        from collections import deque
+
+        self._speed_history: deque[tuple[float, float]] = deque(maxlen=80)
 
     def feed(self, packet: Packet) -> Incident | None:
+        # Maintain speed history regardless of cooldown — needed for the
+        # slide trigger and cheap to keep current.
+        self._speed_history.append((packet.recv_time, packet.speed_kmh))
+
         # Respect cooldown so we don't roast the driver six times for one spin.
         if (packet.recv_time - self._last_emit_t) < self.config.cooldown_s:
             self._spin_streak_started = None
@@ -113,7 +133,53 @@ class IncidentDetector:
         else:
             self._spin_streak_started = None
 
+        # ---- slide check (wheels skating, speed dumping) ----------------
+        # Trigger criteria (must all be true):
+        #   - rear-axle wheel speed >> front-axle (the "wheels are spinning
+        #     not gripping" signature -- ratio > 1.6, well above wheelspin)
+        #   - current speed is low-to-mid (high-speed wheelspin under
+        #     full-throttle exit is NOT a slide-out)
+        #   - speed dropped a lot recently (driver was going much faster
+        #     than they are now -- the slide cost them)
+        cfg = self.config
+        if (
+            cfg.slide_min_speed_kmh <= packet.speed_kmh <= cfg.slide_max_speed_kmh
+            and self._speed_history
+        ):
+            front_avg = (abs(packet.wheel_speed_fl) + abs(packet.wheel_speed_fr)) / 2.0
+            rear_avg = (abs(packet.wheel_speed_rl) + abs(packet.wheel_speed_rr)) / 2.0
+            if front_avg > 5.0 and rear_avg / front_avg >= cfg.slide_ratio_threshold:
+                speed_drop = self._speed_drop_in_window(packet.recv_time, cfg.slide_drop_window_s)
+                if speed_drop >= cfg.slide_min_speed_drop_kmh:
+                    ratio = rear_avg / front_avg
+                    return self._emit(
+                        Incident(
+                            type="slide",
+                            severity=min(1.0, (ratio - 1.0) / 1.5),
+                            recv_time=packet.recv_time,
+                            evidence={
+                                "peak_ratio": round(ratio, 2),
+                                "speed_kmh": round(packet.speed_kmh, 1),
+                                "speed_drop_kmh": round(speed_drop, 1),
+                            },
+                        )
+                    )
+
         return None
+
+    def _speed_drop_in_window(self, now: float, window_s: float) -> float:
+        """Return max(speed) - current_speed within the last ``window_s``."""
+        if not self._speed_history:
+            return 0.0
+        cutoff = now - window_s
+        max_speed = 0.0
+        current = self._speed_history[-1][1]
+        for t, s in self._speed_history:
+            if t < cutoff:
+                continue
+            if s > max_speed:
+                max_speed = s
+        return max(0.0, max_speed - current)
 
     # ---- internals ------------------------------------------------------
 
