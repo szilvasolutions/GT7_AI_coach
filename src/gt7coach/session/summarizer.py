@@ -119,15 +119,21 @@ def summarise(
     *,
     provider: CoachProvider,
     driver_style: str = "smooth",
+    max_tokens: int = 1024,
 ) -> str:
-    """Produce a 3-5 sentence post-session reflection using the given provider."""
+    """Produce a 3-5 sentence post-session reflection using the given provider.
+
+    The summary needs much more headroom than per-corner advice (3-5 sentences
+    vs 4-8 words), so we explicitly request 1024 tokens. The provider's own
+    default is much smaller because it's tuned for the live coaching path.
+    """
     stats = aggregate(session_dir)
     user = (
         f"Driver style: {driver_style}.\n"
         f"{stats.as_prompt_block()}\n"
         "Write 3-5 sentences of post-session feedback."
     )
-    response = provider.complete(SUMMARY_SYSTEM_PROMPT, user)
+    response = provider.complete(SUMMARY_SYSTEM_PROMPT, user, max_tokens=max_tokens)
     summary = (response or "").strip()
     (session_dir / "summary.txt").write_text(summary, encoding="utf-8")
     (session_dir / "summary_prompt.txt").write_text(

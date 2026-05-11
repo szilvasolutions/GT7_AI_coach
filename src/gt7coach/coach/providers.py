@@ -7,6 +7,10 @@ verbatim view of what the LLM saw.
 
 SDK imports are deferred to :meth:`__init__` so users only need the
 dependency for the provider they actually use.
+
+``complete()`` takes an optional per-call ``max_tokens`` override so that the
+session summarizer can request a longer response (3-5 sentences) than the
+per-corner advisor (4-12 words).
 """
 
 from __future__ import annotations
@@ -17,6 +21,12 @@ from typing import Protocol
 
 log = logging.getLogger(__name__)
 
+# Default per-call output budget. 200 leaves enough headroom even for models
+# that emit internal "thinking" tokens before producing visible text (Gemini
+# 2.5 family). The advisor's 12-word constraint comes from the system prompt;
+# this token cap is just a safety ceiling.
+DEFAULT_MAX_TOKENS = 200
+
 
 class ProviderError(RuntimeError):
     """Wraps any LLM-side failure so callers handle one exception type."""
@@ -25,7 +35,7 @@ class ProviderError(RuntimeError):
 class CoachProvider(Protocol):
     """Per ARCHITECTURE.md section 7."""
 
-    def complete(self, system: str, user: str) -> str: ...
+    def complete(self, system: str, user: str, *, max_tokens: int | None = None) -> str: ...
 
 
 # ---- Concrete implementations ----------------------------------------------
@@ -41,7 +51,7 @@ class AnthropicProvider:
         api_key: str,
         model: str | None = None,
         *,
-        max_tokens: int = 64,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
         temperature: float = 0.4,
     ) -> None:
         try:
@@ -55,12 +65,12 @@ class AnthropicProvider:
         self.max_tokens = max_tokens
         self.temperature = temperature
 
-    def complete(self, system: str, user: str) -> str:
+    def complete(self, system: str, user: str, *, max_tokens: int | None = None) -> str:
         try:
             # Cache the stable system prompt so repeated calls stay cheap.
             resp = self._client.messages.create(
                 model=self.model,
-                max_tokens=self.max_tokens,
+                max_tokens=max_tokens if max_tokens is not None else self.max_tokens,
                 temperature=self.temperature,
                 system=[
                     {
@@ -93,7 +103,7 @@ class OpenAIProvider:
         api_key: str,
         model: str | None = None,
         *,
-        max_tokens: int = 64,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
         temperature: float = 0.4,
     ) -> None:
         try:
@@ -105,11 +115,11 @@ class OpenAIProvider:
         self.max_tokens = max_tokens
         self.temperature = temperature
 
-    def complete(self, system: str, user: str) -> str:
+    def complete(self, system: str, user: str, *, max_tokens: int | None = None) -> str:
         try:
             resp = self._client.chat.completions.create(
                 model=self.model,
-                max_tokens=self.max_tokens,
+                max_tokens=max_tokens if max_tokens is not None else self.max_tokens,
                 temperature=self.temperature,
                 messages=[
                     {"role": "system", "content": system},
@@ -124,9 +134,16 @@ class OpenAIProvider:
 class GeminiProvider:
     """Google Gemini via the new ``google-genai`` SDK.
 
-    Safety thresholds are set permissive because the racing-coach corpus is
-    benign and the default filter occasionally blocks helpful answers on
-    racing verbs like "attack" / "punish".
+    Two non-obvious things we configure:
+
+    * **Permissive safety thresholds.** The racing-coach corpus is benign and
+      the default filter occasionally blocks helpful answers on racing verbs
+      like "attack" / "punish".
+    * **Thinking tokens disabled.** Gemini 2.5 family models emit internal
+      reasoning tokens BEFORE the visible answer, and that reasoning counts
+      against ``max_output_tokens``. With ``thinking_budget=0`` the model
+      replies immediately, which fixes the "Carry" / "Settle the" truncation
+      we observed in production. Lower latency too.
     """
 
     DEFAULT_MODEL = "gemini-2.5-flash"
@@ -136,7 +153,7 @@ class GeminiProvider:
         api_key: str,
         model: str | None = None,
         *,
-        max_tokens: int = 64,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
         temperature: float = 0.4,
     ) -> None:
         try:
@@ -151,7 +168,6 @@ class GeminiProvider:
         self.model = model or self.DEFAULT_MODEL
         self.max_tokens = max_tokens
         self.temperature = temperature
-        # Build the safety-settings list once; the SDK accepts strings here.
         self._safety = [
             types.SafetySetting(category=cat, threshold="BLOCK_NONE")
             for cat in (
@@ -161,17 +177,22 @@ class GeminiProvider:
                 "HARM_CATEGORY_DANGEROUS_CONTENT",
             )
         ]
+        # Only Gemini 2.5+ models support thinking_config; for older models
+        # the SDK ignores the field, so passing it is safe.
+        self._thinking = types.ThinkingConfig(thinking_budget=0)
 
-    def complete(self, system: str, user: str) -> str:
+    def complete(self, system: str, user: str, *, max_tokens: int | None = None) -> str:
+        budget = max_tokens if max_tokens is not None else self.max_tokens
         try:
             resp = self._client.models.generate_content(
                 model=self.model,
                 contents=user,
                 config=self._types.GenerateContentConfig(
                     system_instruction=system,
-                    max_output_tokens=self.max_tokens,
+                    max_output_tokens=budget,
                     temperature=self.temperature,
                     safety_settings=self._safety,
+                    thinking_config=self._thinking,
                 ),
             )
         except Exception as exc:
@@ -210,7 +231,7 @@ class OllamaProvider:
         self.base_url = (base_url or self.DEFAULT_URL).rstrip("/")
         self.timeout_s = timeout_s
 
-    def complete(self, system: str, user: str) -> str:
+    def complete(self, system: str, user: str, *, max_tokens: int | None = None) -> str:
         import requests
 
         try:
@@ -223,6 +244,7 @@ class OllamaProvider:
                         {"role": "user", "content": user},
                     ],
                     "stream": False,
+                    "options": {"num_predict": max_tokens} if max_tokens is not None else {},
                 },
                 timeout=self.timeout_s,
             )
@@ -245,8 +267,11 @@ class MockProvider:
         self._responder = responder or (lambda _sys, user: f"Mock advice for: {user[:32]}")
         self.calls: list[tuple[str, str]] = []
 
-    def complete(self, system: str, user: str) -> str:
+    def complete(self, system: str, user: str, *, max_tokens: int | None = None) -> str:
+        # max_tokens is honoured by real providers; the mock records the value
+        # for tests but doesn't otherwise enforce it.
         self.calls.append((system, user))
+        _ = max_tokens
         return self._responder(system, user)
 
 
