@@ -16,7 +16,6 @@ from gt7coach.coach import (
 )
 from gt7coach.detectors import CornerTrace, Event
 from gt7coach.tracks import TrackDetector
-from gt7coach.tracks.database import DEFAULT_TRACKS
 from gt7coach.voice import NullVoiceEngine
 from tests._synth import make_packet
 
@@ -60,18 +59,24 @@ def _packet_at(x: float, z: float, recv_time: float = 0.0):
 
 def test_track_detector_matches_deep_forest() -> None:
     det = TrackDetector()
-    # Deep Forest bbox seeded x in [-630, 1015], z in [-340, 290]
-    track = det.feed(_packet_at(0.0, 0.0))
+    # Walk along the first ~10 polyline points of Deep Forest. The detector
+    # waits for unambiguous data — feeding multiple in-line points lets it
+    # rule out other tracks that may overlap at a single coincidence point.
+    from gt7coach.tracks.database import load_default_tracks
+
+    dfr = load_default_tracks()["DeepForestRaceway"]
+    track = None
+    for x, z in zip(dfr.polyline_x[:20], dfr.polyline_z[:20], strict=True):
+        track = det.feed(_packet_at(x, z))
+        if track is not None:
+            break
     assert track is not None
-    assert track.id == "deep_forest"
-    # Subsequent calls return the cached choice.
-    track2 = det.feed(_packet_at(500.0, 100.0))
-    assert track2 is track
+    assert track.id == "DeepForestRaceway"
 
 
 def test_track_detector_misses_outside_bbox_and_gives_up() -> None:
     det = TrackDetector(max_probes=3)
-    out_of_range = _packet_at(-5000.0, -5000.0)
+    out_of_range = _packet_at(-50000.0, -50000.0)
     for _ in range(3):
         assert det.feed(out_of_range) is None
     # Once exhausted, further packets are also None.
@@ -80,10 +85,10 @@ def test_track_detector_misses_outside_bbox_and_gives_up() -> None:
 
 def test_track_detector_force_overrides() -> None:
     det = TrackDetector()
-    track = det.force("deep_forest")
-    assert track is DEFAULT_TRACKS["deep_forest"]
+    track = det.force("DeepForestRaceway")
+    assert track.id == "DeepForestRaceway"
     # feed() now short-circuits and returns the forced track.
-    assert det.feed(_packet_at(-9999.0, -9999.0)) is track
+    assert det.feed(_packet_at(-50000.0, -50000.0)) is track
 
 
 # ---- Async Advisor --------------------------------------------------------

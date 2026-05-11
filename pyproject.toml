@@ -53,6 +53,10 @@ Issues = "https://github.com/szilvasolutions/GT7_AI_coach/issues"
 [project.scripts]
 gt7coach-capture = "gt7coach.capture:main"
 gt7coach-coach = "gt7coach.main:main"
+gt7coach-list-tracks = "gt7coach.list_tracks:main"
+
+[tool.setuptools.package-data]
+"gt7coach.tracks" = ["data/*.json", "data/*.md"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
