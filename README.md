@@ -62,11 +62,15 @@ ruff check
 The test suite runs without any PS5. Phase 1 verifies Salsa20 decrypt, packet
 parsing against the canonical kaitai struct, and CSV replay.
 
-## Run the coach (Phase 3)
+## Run the coach
 
 `gt7coach-coach` runs the full pipeline: telemetry source → corner segmenter
-→ detectors → LLM advisor → voice. It works both against a live PS5 and
-against a recorded CSV (no PS5 needed for the second).
+→ nine physics detectors → LLM advisor → voice → session log. Works both
+against a live PS5 and against a recorded CSV (no PS5 needed for the second).
+
+The detector layer currently catches **late_brake, lockup,
+trail_off_too_fast, wheelspin, sawing, early_lift, understeer, oversteer,
+and late_apex.**
 
 Install the extras for whichever provider + voice you want:
 
@@ -101,7 +105,20 @@ gt7coach-coach --ip 192.168.1.120 --provider anthropic
 
 Useful flags: `--cooldown <seconds>` (rate limit), `--driver-style` (smooth /
 aggressive / learning), `--model <name>` (override default per provider),
-`--voice null` (log advice instead of speaking it). `--help` for all of them.
+`--voice null` (log advice instead of speaking it), `--voice piper` (better
+neural TTS, needs a voice model on disk), `--config config.yaml` (load
+thresholds from YAML), `--summary` (LLM-written 3-5 sentence debrief at end
+of run). `--help` for all of them.
+
+Each run writes `sessions/run_<timestamp>/` containing:
+
+* `telemetry.csv` — every packet, replay-compatible
+* `events.jsonl` — every detected event with the trace summary
+* `coach.jsonl` — every advisor turn with the verbatim system + user prompt
+  and the LLM response (the AI audit log)
+* `summary.txt` + `summary_prompt.txt` — post-session debrief (with
+  `--summary`)
+* `meta.json` — host info, CLI args, totals
 
 ## Capture a live session (no coaching, no voice — telemetry only)
 
