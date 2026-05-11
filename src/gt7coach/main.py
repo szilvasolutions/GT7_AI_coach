@@ -30,16 +30,22 @@ from gt7coach.coach import (
     RateLimiterConfig,
     make_provider,
 )
+from gt7coach.config import load as load_config
 from gt7coach.detectors import (
     CornerSegmenter,
     CornerTrace,
     Event,
+    detect_early_lift,
+    detect_late_apex,
     detect_late_brake,
     detect_lockup,
+    detect_oversteer,
+    detect_sawing,
+    detect_trail_off_too_fast,
     detect_understeer,
     detect_wheelspin,
 )
-from gt7coach.session import SessionLogger
+from gt7coach.session import SessionLogger, summarise
 from gt7coach.telemetry import Packet, Receiver, ReceiverConfig, replay_csv
 from gt7coach.voice import make_voice
 
@@ -91,8 +97,13 @@ def _run_detectors(trace: CornerTrace) -> list[Event]:
     events: list[Event] = []
     events += detect_late_brake(trace)
     events += detect_lockup(trace)
+    events += detect_trail_off_too_fast(trace)
     events += detect_wheelspin(trace)
+    events += detect_sawing(trace)
+    events += detect_early_lift(trace)
     events += detect_understeer(trace)
+    events += detect_oversteer(trace)
+    events += detect_late_apex(trace)
     return events
 
 
@@ -158,6 +169,24 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Disable session logging entirely",
     )
+    p.add_argument(
+        "--summary",
+        action="store_true",
+        help="At end of session, call the LLM once for a 3-5 sentence debrief",
+    )
+    p.add_argument(
+        "--no-summary",
+        action="store_true",
+        help="Disable end-of-session summary even if config.yaml enables it",
+    )
+
+    # Config.
+    p.add_argument(
+        "--config",
+        type=Path,
+        default=None,
+        help="Path to config.yaml (default: ./config.yaml if it exists)",
+    )
 
     # Misc.
     p.add_argument("--env-file", type=Path, default=None, help="Path to .env (default: ./.env)")
@@ -175,28 +204,50 @@ def main(argv: list[str] | None = None) -> int:
 
     _load_env(args.env_file)
 
-    api_key = _resolve_api_key(args.provider, args.api_key)
+    cfg_path = args.config
+    if cfg_path is None and Path("config.yaml").is_file():
+        cfg_path = Path("config.yaml")
+    cfg = load_config(cfg_path)
+
+    provider_name = args.provider if args.provider != "anthropic" else cfg.coach_provider
+    model = args.model or cfg.coach_model
+    api_key = _resolve_api_key(provider_name, args.api_key)
     try:
-        provider = make_provider(args.provider, api_key=api_key, model=args.model)
+        provider = make_provider(provider_name, api_key=api_key, model=model)
     except Exception as exc:
         log.error("provider setup failed: %s", exc)
         return 2
 
+    voice_name = args.voice if args.voice != "pyttsx3" else cfg.voice.engine
+    voice_kwargs: dict[str, object] = {}
+    if voice_name == "pyttsx3":
+        voice_kwargs["rate"] = args.voice_rate
+    elif voice_name == "piper":
+        voice_kwargs["voice"] = cfg.voice.piper_voice
+        if cfg.voice.piper_model_path:
+            voice_kwargs["model_path"] = cfg.voice.piper_model_path
     try:
-        voice = (
-            make_voice(args.voice, rate=args.voice_rate)
-            if args.voice == "pyttsx3"
-            else make_voice(args.voice)
-        )
+        voice = make_voice(voice_name, **voice_kwargs)
     except Exception as exc:
         log.error("voice setup failed: %s", exc)
         return 2
 
+    rate_limiter_cfg = RateLimiterConfig(
+        global_cooldown_s=args.cooldown
+        if args.cooldown != 4.0
+        else cfg.rate_limiter.global_cooldown_s,
+        duplicate_window_s=cfg.rate_limiter.duplicate_window_s,
+    )
+    advisor_cfg = AdvisorConfig(
+        driver_style=args.driver_style
+        if args.driver_style != "smooth"
+        else cfg.advisor.driver_style,
+    )
     advisor = Advisor(
         provider=provider,
         voice=voice,
-        rate_limiter=RateLimiter(RateLimiterConfig(global_cooldown_s=args.cooldown)),
-        config=AdvisorConfig(driver_style=args.driver_style),
+        rate_limiter=RateLimiter(rate_limiter_cfg),
+        config=advisor_cfg,
     )
 
     if args.source == "live":
@@ -261,6 +312,18 @@ def main(argv: list[str] | None = None) -> int:
         voice.stop()
         if session is not None:
             session.close()
+
+    want_summary = args.summary or (cfg.session.generate_summary and not args.no_summary)
+    if want_summary and session is not None:
+        try:
+            summary = summarise(
+                session.dir, provider=provider, driver_style=advisor_cfg.driver_style
+            )
+            print("\n=== Session summary ===")
+            print(summary)
+            print(f"\n(saved to {session.dir / 'summary.txt'})")
+        except Exception as exc:
+            log.warning("session summary failed: %s", exc)
 
     return 0
 
