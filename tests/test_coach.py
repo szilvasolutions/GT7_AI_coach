@@ -174,7 +174,9 @@ def test_advisor_respects_rate_limiter() -> None:
     assert r3.advice is not None
 
 
-def test_advisor_returns_no_op_on_provider_error() -> None:
+def test_advisor_falls_back_to_canned_phrase_on_provider_error() -> None:
+    """Provider failure must NOT produce silence — speak the canned phrase."""
+
     def boom(_s: str, _u: str) -> str:
         raise ProviderError("boom")
 
@@ -188,8 +190,30 @@ def test_advisor_returns_no_op_on_provider_error() -> None:
     trace, _ = next(iter(_build_traces_and_events()))
     evt = Event(type="braking.late_brake", severity=0.5, t_offset=0.0)
     res = advisor.on_corner(trace, [evt], now=0.0)
+    assert res.advice == "Brake earlier."  # canned fallback for braking.late_brake
+    assert res.suppressed_reason is not None and "provider-error" in res.suppressed_reason
+    assert voice.spoken == ["Brake earlier."]
+
+
+def test_advisor_no_op_when_event_type_has_no_fallback() -> None:
+    """Provider error + unknown event type -> no advice (no canned phrase)."""
+
+    def boom(_s: str, _u: str) -> str:
+        raise ProviderError("boom")
+
+    provider = MockProvider(responder=boom)
+    voice = NullVoiceEngine()
+    advisor = Advisor(
+        provider=provider,
+        voice=voice,
+        rate_limiter=RateLimiter(RateLimiterConfig(global_cooldown_s=0.0)),
+    )
+    trace, _ = next(iter(_build_traces_and_events()))
+    evt = Event(type="unknown.event", severity=0.5, t_offset=0.0)
+    res = advisor.on_corner(trace, [evt], now=0.0)
     assert res.advice is None
     assert res.suppressed_reason is not None and "provider-error" in res.suppressed_reason
+    assert voice.spoken == []
 
 
 # ---- Factory ----------------------------------------------------------------

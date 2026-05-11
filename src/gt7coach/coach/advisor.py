@@ -22,6 +22,27 @@ from gt7coach.voice.base import VoiceEngine
 log = logging.getLogger(__name__)
 
 
+# Canned coaching phrases, one per event type. Spoken when the LLM provider
+# fails or returns an empty response, so the driver always gets *some*
+# audible feedback for a real detected event instead of dead silence. Kept
+# short and imperative — same constraints as the LLM system prompt.
+_FALLBACK_PHRASES: dict[str, str] = {
+    "braking.late_brake": "Brake earlier.",
+    "braking.lockup": "Lockup. Trail off the brakes.",
+    "braking.trail_off_too_fast": "Release the brake more gradually.",
+    "throttle.wheelspin": "Less throttle on exit.",
+    "throttle.sawing": "Smooth the throttle.",
+    "throttle.early_lift": "Stay on the throttle through the corner.",
+    "steering.understeer": "Less steering, more patience.",
+    "steering.oversteer": "Counter and ease off.",
+    "line.late_apex": "Hit the apex sooner.",
+}
+
+
+def fallback_phrase(event_type: str) -> str:
+    return _FALLBACK_PHRASES.get(event_type, "")
+
+
 @dataclass(slots=True)
 class CornerContext:
     """Summary stats handed to the provider — never raw telemetry rows."""
@@ -101,32 +122,34 @@ class Advisor:
 
         try:
             advice = self.provider.complete(SYSTEM_PROMPT, user_prompt)
+            failure_reason: str | None = None
         except ProviderError as exc:
-            log.warning("provider failed: %s", exc)
-            return self._record(
-                None,
-                winner,
-                f"provider-error: {exc}",
-                system_prompt=SYSTEM_PROMPT,
-                user_prompt=user_prompt,
-            )
+            log.warning("provider failed: %s — falling back to canned phrase", exc)
+            advice = ""
+            failure_reason = f"provider-error: {exc}"
 
         advice = (advice or "").strip()
         if not advice:
-            return self._record(
-                None,
-                winner,
-                "empty-response",
-                system_prompt=SYSTEM_PROMPT,
-                user_prompt=user_prompt,
-            )
+            # Provider failed or returned nothing. Speak the canned phrase
+            # for this event type so the driver still gets feedback.
+            advice = fallback_phrase(winner.type)
+            if not advice:
+                # No canned phrase for this event type either; give up.
+                return self._record(
+                    None,
+                    winner,
+                    failure_reason or "empty-response",
+                    system_prompt=SYSTEM_PROMPT,
+                    user_prompt=user_prompt,
+                )
+            failure_reason = f"{failure_reason or 'empty-response'}; spoke fallback"
 
         self.rate_limiter.record(winner.type, now=now)
         self.voice.speak(advice)
         return self._record(
             advice,
             winner,
-            None,
+            failure_reason,
             system_prompt=SYSTEM_PROMPT,
             user_prompt=user_prompt,
         )
