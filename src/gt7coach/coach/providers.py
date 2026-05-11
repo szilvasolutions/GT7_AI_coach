@@ -1,21 +1,19 @@
 """Provider abstraction: Anthropic, OpenAI, Gemini, Ollama, Mock.
 
-Each provider implements the :class:`CoachProvider` protocol. SDK imports
-are deferred to :meth:`__init__` so users only need the dependency for the
-provider they actually use.
+Each provider implements :meth:`CoachProvider.complete`, which takes already-
+built system and user prompt strings and returns the model's response. The
+advisor (not the provider) builds the prompt, so logging gets a single
+verbatim view of what the LLM saw.
+
+SDK imports are deferred to :meth:`__init__` so users only need the
+dependency for the provider they actually use.
 """
 
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, Iterable
-from typing import TYPE_CHECKING, Protocol
-
-from gt7coach.coach.prompt import SYSTEM_PROMPT, build_user_prompt
-
-if TYPE_CHECKING:
-    from gt7coach.coach.advisor import CornerContext
-    from gt7coach.detectors import Event
+from collections.abc import Callable
+from typing import Protocol
 
 log = logging.getLogger(__name__)
 
@@ -27,12 +25,7 @@ class ProviderError(RuntimeError):
 class CoachProvider(Protocol):
     """Per ARCHITECTURE.md section 7."""
 
-    def advise(
-        self,
-        events: Iterable[Event],
-        context: CornerContext,
-        driver_style: str,
-    ) -> str: ...
+    def complete(self, system: str, user: str) -> str: ...
 
 
 # ---- Concrete implementations ----------------------------------------------
@@ -62,8 +55,7 @@ class AnthropicProvider:
         self.max_tokens = max_tokens
         self.temperature = temperature
 
-    def advise(self, events, context, driver_style):
-        user_text = build_user_prompt(events, context, driver_style)
+    def complete(self, system: str, user: str) -> str:
         try:
             # Cache the stable system prompt so repeated calls stay cheap.
             resp = self._client.messages.create(
@@ -73,11 +65,11 @@ class AnthropicProvider:
                 system=[
                     {
                         "type": "text",
-                        "text": SYSTEM_PROMPT,
+                        "text": system,
                         "cache_control": {"type": "ephemeral"},
                     }
                 ],
-                messages=[{"role": "user", "content": user_text}],
+                messages=[{"role": "user", "content": user}],
             )
             return _extract_text_from_anthropic(resp).strip()
         except Exception as exc:
@@ -113,16 +105,15 @@ class OpenAIProvider:
         self.max_tokens = max_tokens
         self.temperature = temperature
 
-    def advise(self, events, context, driver_style):
-        user_text = build_user_prompt(events, context, driver_style)
+    def complete(self, system: str, user: str) -> str:
         try:
             resp = self._client.chat.completions.create(
                 model=self.model,
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
                 messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": user_text},
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
                 ],
             )
             return (resp.choices[0].message.content or "").strip()
@@ -131,7 +122,12 @@ class OpenAIProvider:
 
 
 class GeminiProvider:
-    """Google Gemini (via the google-generativeai SDK)."""
+    """Google Gemini via the new ``google-genai`` SDK.
+
+    Safety thresholds are set permissive because the racing-coach corpus is
+    benign and the default filter occasionally blocks helpful answers on
+    racing verbs like "attack" / "punish".
+    """
 
     DEFAULT_MODEL = "gemini-2.5-flash"
 
@@ -144,34 +140,53 @@ class GeminiProvider:
         temperature: float = 0.4,
     ) -> None:
         try:
-            import google.generativeai as genai
+            from google import genai
+            from google.genai import types
         except ImportError as exc:
             raise ProviderError(
-                "google-generativeai SDK not installed. pip install 'gt7coach[gemini]'"
+                "google-genai SDK not installed. pip install 'gt7coach[gemini]'"
             ) from exc
-        genai.configure(api_key=api_key)
-        self._genai = genai
+        self._client = genai.Client(api_key=api_key)
+        self._types = types
         self.model = model or self.DEFAULT_MODEL
         self.max_tokens = max_tokens
         self.temperature = temperature
-        self._client = genai.GenerativeModel(
-            model_name=self.model,
-            system_instruction=SYSTEM_PROMPT,
-        )
+        # Build the safety-settings list once; the SDK accepts strings here.
+        self._safety = [
+            types.SafetySetting(category=cat, threshold="BLOCK_NONE")
+            for cat in (
+                "HARM_CATEGORY_HARASSMENT",
+                "HARM_CATEGORY_HATE_SPEECH",
+                "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                "HARM_CATEGORY_DANGEROUS_CONTENT",
+            )
+        ]
 
-    def advise(self, events, context, driver_style):
-        user_text = build_user_prompt(events, context, driver_style)
+    def complete(self, system: str, user: str) -> str:
         try:
-            resp = self._client.generate_content(
-                user_text,
-                generation_config=self._genai.types.GenerationConfig(
+            resp = self._client.models.generate_content(
+                model=self.model,
+                contents=user,
+                config=self._types.GenerateContentConfig(
+                    system_instruction=system,
                     max_output_tokens=self.max_tokens,
                     temperature=self.temperature,
+                    safety_settings=self._safety,
                 ),
             )
-            return (resp.text or "").strip()
         except Exception as exc:
             raise ProviderError(f"gemini call failed: {exc}") from exc
+
+        text = (getattr(resp, "text", None) or "").strip()
+        if text:
+            return text
+
+        # If the SDK didn't fill resp.text the response was blocked or empty.
+        finish_reason = None
+        candidates = getattr(resp, "candidates", None) or []
+        if candidates:
+            finish_reason = getattr(candidates[0], "finish_reason", None)
+        raise ProviderError(f"gemini returned no text (finish_reason={finish_reason!r})")
 
 
 class OllamaProvider:
@@ -195,18 +210,17 @@ class OllamaProvider:
         self.base_url = (base_url or self.DEFAULT_URL).rstrip("/")
         self.timeout_s = timeout_s
 
-    def advise(self, events, context, driver_style):
+    def complete(self, system: str, user: str) -> str:
         import requests
 
-        user_text = build_user_prompt(events, context, driver_style)
         try:
             resp = requests.post(
                 f"{self.base_url}/api/chat",
                 json={
                     "model": self.model,
                     "messages": [
-                        {"role": "system", "content": SYSTEM_PROMPT},
-                        {"role": "user", "content": user_text},
+                        {"role": "system", "content": system},
+                        {"role": "user", "content": user},
                     ],
                     "stream": False,
                 },
@@ -226,17 +240,14 @@ class MockProvider:
 
     def __init__(
         self,
-        responder: Callable[[list[Event], CornerContext, str], str] | None = None,
+        responder: Callable[[str, str], str] | None = None,
     ) -> None:
-        self._responder = responder or (
-            lambda events, _ctx, _style: f"Mock advice: {next(iter(events)).type}"
-        )
-        self.calls: list[tuple[list[Event], CornerContext, str]] = []
+        self._responder = responder or (lambda _sys, user: f"Mock advice for: {user[:32]}")
+        self.calls: list[tuple[str, str]] = []
 
-    def advise(self, events, context, driver_style):
-        events_list = list(events)
-        self.calls.append((events_list, context, driver_style))
-        return self._responder(events_list, context, driver_style)
+    def complete(self, system: str, user: str) -> str:
+        self.calls.append((system, user))
+        return self._responder(system, user)
 
 
 # ---- Factory ----------------------------------------------------------------

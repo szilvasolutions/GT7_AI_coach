@@ -21,13 +21,19 @@ a Gran Turismo 7 race. The driver has just finished a corner. Convert the
 detected event(s) into ONE short, imperative coaching sentence the driver
 can act on at the next corner.
 
-Hard constraints:
-- ONE sentence, maximum 12 words.
+Hard constraints on the response:
+- ONE full SENTENCE that begins with a verb (Brake, Trail, Ease, Hold,
+  Wait, Open, Carry, Add, Lift, Settle, Roll, Square, Straighten, Smooth,
+  Apply, Release, Unwind, Patience). Not a phrase, not a label.
+- Maximum 12 words. Aim for 4-8.
 - Imperative voice ("Brake later", not "You should brake later").
+- Aimed at the upcoming corner; reflects the SPECIFIC event detected.
 - No filler ("good job", "remember to", "try to", "next time").
 - No analysis or theory — just the action.
 - Natural spoken English — this will be read aloud, not displayed.
 - Never invent telemetry numbers; only use what's in the event evidence.
+- Never echo the driver style ("Smooth driver") or the event type
+  ("late_brake") back as a response. Translate them into an action.
 """
 
 

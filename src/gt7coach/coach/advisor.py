@@ -1,7 +1,9 @@
 """Advisor: glues detected events to provider to voice.
 
 Owns the per-corner policy (highest-severity event wins) and consults the
-rate limiter and the voice queue before calling the LLM.
+rate limiter and the voice queue before calling the LLM. Builds the prompt
+itself so that the prompt + response can be logged verbatim by the session
+logger (which the provider doesn't see).
 """
 
 from __future__ import annotations
@@ -10,6 +12,7 @@ import logging
 from collections.abc import Iterable
 from dataclasses import dataclass
 
+from gt7coach.coach.prompt import SYSTEM_PROMPT, build_user_prompt
 from gt7coach.coach.providers import CoachProvider, ProviderError
 from gt7coach.coach.rate_limiter import RateLimiter
 from gt7coach.detectors import CornerTrace, Event
@@ -52,6 +55,8 @@ class AdvisorResult:
     advice: str | None
     chosen_event: Event | None
     suppressed_reason: str | None = None
+    system_prompt: str | None = None
+    user_prompt: str | None = None
 
 
 class Advisor:
@@ -91,31 +96,57 @@ class Advisor:
         if not self.voice.is_idle():
             return self._record(None, winner, "voice-busy")
 
+        ctx = CornerContext.from_trace(trace)
+        user_prompt = build_user_prompt([winner], ctx, self.config.driver_style)
+
         try:
-            advice = self.provider.advise(
-                [winner],
-                CornerContext.from_trace(trace),
-                self.config.driver_style,
-            )
+            advice = self.provider.complete(SYSTEM_PROMPT, user_prompt)
         except ProviderError as exc:
             log.warning("provider failed: %s", exc)
-            return self._record(None, winner, f"provider-error: {exc}")
+            return self._record(
+                None,
+                winner,
+                f"provider-error: {exc}",
+                system_prompt=SYSTEM_PROMPT,
+                user_prompt=user_prompt,
+            )
 
         advice = (advice or "").strip()
         if not advice:
-            return self._record(None, winner, "empty-response")
+            return self._record(
+                None,
+                winner,
+                "empty-response",
+                system_prompt=SYSTEM_PROMPT,
+                user_prompt=user_prompt,
+            )
 
         self.rate_limiter.record(winner.type, now=now)
         self.voice.speak(advice)
-        return self._record(advice, winner, None)
+        return self._record(
+            advice,
+            winner,
+            None,
+            system_prompt=SYSTEM_PROMPT,
+            user_prompt=user_prompt,
+        )
 
     def _record(
         self,
         advice: str | None,
         chosen_event: Event | None,
         reason: str | None,
+        *,
+        system_prompt: str | None = None,
+        user_prompt: str | None = None,
     ) -> AdvisorResult:
-        result = AdvisorResult(advice=advice, chosen_event=chosen_event, suppressed_reason=reason)
+        result = AdvisorResult(
+            advice=advice,
+            chosen_event=chosen_event,
+            suppressed_reason=reason,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+        )
         self.history.append(result)
         if advice is not None:
             log.info(
@@ -134,5 +165,4 @@ class Advisor:
         return result
 
 
-# Keep the legacy constant accessible in case someone imports it from here.
 __all__ = ["G_MS2", "Advisor", "AdvisorConfig", "AdvisorResult", "CornerContext"]

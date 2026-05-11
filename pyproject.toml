@@ -32,13 +32,13 @@ dev = [
 ]
 anthropic = ["anthropic>=0.39"]
 openai = ["openai>=1.40"]
-gemini = ["google-generativeai>=0.7"]
+gemini = ["google-genai>=0.3"]
 ollama = ["requests>=2.32"]
 voice = ["pyttsx3>=2.90"]
 all = [
     "anthropic>=0.39",
     "openai>=1.40",
-    "google-generativeai>=0.7",
+    "google-genai>=0.3",
     "requests>=2.32",
     "pyttsx3>=2.90",
 ]
