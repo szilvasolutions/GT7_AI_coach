@@ -75,3 +75,6 @@ desktop.ini
 # Local TTS voice files
 VOICE/
 
+
+# Live capture dumps (binary + CSV + metadata)
+captures/

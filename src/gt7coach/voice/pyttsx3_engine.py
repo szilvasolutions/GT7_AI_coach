@@ -67,35 +67,38 @@ class PyttsxVoiceEngine:
     # ---- worker ----------------------------------------------------------
 
     def _worker(self) -> None:
+        """Drain the queue, re-initialising the engine per utterance.
+
+        pyttsx3's SAPI backend on Windows reliably fails on the second and
+        subsequent ``runAndWait()`` calls against the same engine instance —
+        the first utterance speaks, every later one is silently swallowed.
+        Re-initialising costs ~100 ms but works every time, which matters more
+        than throughput at the 4 s rate-limit cadence the coach runs at.
+        """
         import pyttsx3
 
-        try:
-            engine = pyttsx3.init()
-            engine.setProperty("rate", self._rate)
-        except Exception as exc:  # pragma: no cover — platform-dependent
-            log.error("pyttsx3 init failed: %s", exc)
-            return
-
-        try:
-            while not self._stop.is_set():
-                self._wake.wait(timeout=0.1)
-                self._wake.clear()
-                while True:
+        while not self._stop.is_set():
+            self._wake.wait(timeout=0.1)
+            self._wake.clear()
+            while True:
+                with self._lock:
+                    if not self._queue:
+                        break
+                    text = self._queue.popleft()
+                    self._busy = True
+                engine = None
+                try:
+                    engine = pyttsx3.init()
+                    engine.setProperty("rate", self._rate)
+                    engine.say(text)
+                    engine.runAndWait()
+                except Exception as exc:
+                    log.warning("pyttsx3 speak failed (%s): %r", exc, text)
+                finally:
+                    if engine is not None:
+                        try:
+                            engine.stop()
+                        except Exception:  # pragma: no cover
+                            pass
                     with self._lock:
-                        if not self._queue:
-                            break
-                        text = self._queue.popleft()
-                        self._busy = True
-                    try:
-                        engine.say(text)
-                        engine.runAndWait()
-                    except Exception as exc:  # pragma: no cover
-                        log.warning("pyttsx3 speak failed: %s", exc)
-                    finally:
-                        with self._lock:
-                            self._busy = False
-        finally:
-            try:
-                engine.stop()
-            except Exception:  # pragma: no cover
-                pass
+                        self._busy = False
