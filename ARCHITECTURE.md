@@ -1,7 +1,14 @@
 # GT7 AI Coach — v1 Architecture & Specification
 
-> Project brief for v1 rewrite. Treat this document as the source of truth.
-> When in conflict with anything else, this wins.
+> **HISTORICAL DOCUMENT (Phase 1-4 spec).** This is the original brief that
+> shaped the v1 rewrite. The codebase has since shipped Phases 5, 6, and 7;
+> features the original spec deferred or marked out-of-scope (track
+> recognition, async LLM, lap summaries) are now live.
+>
+> **For the current design, read [ARCHITECTURE_LIVE.md](./ARCHITECTURE_LIVE.md).**
+> This file is kept as a snapshot of the original intent. Phase notes
+> ([PHASE_5_NOTES.md](./PHASE_5_NOTES.md), [PHASE_6_NOTES.md](./PHASE_6_NOTES.md),
+> [PHASE_7_NOTES.md](./PHASE_7_NOTES.md)) explain where we diverged and why.
 
 ## 1. What this project is
 
