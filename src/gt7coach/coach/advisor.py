@@ -9,6 +9,7 @@ logger (which the provider doesn't see).
 from __future__ import annotations
 
 import logging
+from collections import deque
 from collections.abc import Iterable
 from dataclasses import dataclass
 
@@ -20,6 +21,9 @@ from gt7coach.detectors.base import G_MS2
 from gt7coach.voice.base import VoiceEngine
 
 log = logging.getLogger(__name__)
+
+_TOP_EVENTS_PER_CORNER = 3  # how many distinct event types we expose to the LLM
+_RECENT_ADVICE_DEPTH = 3  # how much advice history the LLM gets to discourage repeats
 
 
 # Canned coaching phrases, one per event type. Spoken when the LLM provider
@@ -52,6 +56,8 @@ class CornerContext:
     entry_speed_kmh: float
     exit_speed_kmh: float
     duration_s: float
+    corner_type: str = "medium_corner"
+    total_yaw_deg: float = 0.0
 
     @classmethod
     def from_trace(cls, trace: CornerTrace) -> CornerContext:
@@ -61,7 +67,28 @@ class CornerContext:
             entry_speed_kmh=round(trace.entry_speed_kmh, 1),
             exit_speed_kmh=round(trace.exit_speed_kmh, 1),
             duration_s=round(trace.duration_s, 2),
+            corner_type=trace.corner_type,
+            total_yaw_deg=round(trace.total_yaw_deg, 1),
         )
+
+
+def _top_events(events: list[Event], n: int = _TOP_EVENTS_PER_CORNER) -> list[Event]:
+    """Pick the most informative subset of events for one corner.
+
+    Sort by severity descending, then dedupe by event ``type`` so that 5
+    wheelspin events from one corner collapse into a single one for the LLM.
+    Returns at most ``n`` items.
+    """
+    seen: set[str] = set()
+    out: list[Event] = []
+    for evt in sorted(events, key=lambda e: -e.severity):
+        if evt.type in seen:
+            continue
+        seen.add(evt.type)
+        out.append(evt)
+        if len(out) >= n:
+            break
+    return out
 
 
 @dataclass(slots=True)
@@ -95,6 +122,9 @@ class Advisor:
         self.rate_limiter = rate_limiter
         self.config = config or AdvisorConfig()
         self.history: list[AdvisorResult] = []
+        # (event_type, advice_text) of the last few utterances, surfaced to the
+        # LLM so it can vary its phrasing across consecutive corners.
+        self._recent_advice: deque[tuple[str, str]] = deque(maxlen=_RECENT_ADVICE_DEPTH)
 
     def on_corner(
         self,
@@ -107,8 +137,13 @@ class Advisor:
         if not events_list:
             return self._record(None, None, "no events")
 
-        # Per-corner: pick the highest-severity event (section 7).
+        # Per-corner: pick the highest-severity event for rate-limit decisions
+        # and as the headline "what to talk about" (section 7). But pass the
+        # top N distinct event types to the LLM so it can pick the best angle
+        # if e.g. wheelspin + oversteer both fired (they're the same root
+        # cause).
         winner = max(events_list, key=lambda e: e.severity)
+        top = _top_events(events_list)
 
         if not self.rate_limiter.allow(winner.type, now=now):
             return self._record(None, winner, "rate-limited")
@@ -118,7 +153,12 @@ class Advisor:
             return self._record(None, winner, "voice-busy")
 
         ctx = CornerContext.from_trace(trace)
-        user_prompt = build_user_prompt([winner], ctx, self.config.driver_style)
+        user_prompt = build_user_prompt(
+            top,
+            ctx,
+            self.config.driver_style,
+            recent_advice=list(self._recent_advice),
+        )
 
         try:
             advice = self.provider.complete(SYSTEM_PROMPT, user_prompt)
@@ -146,6 +186,7 @@ class Advisor:
 
         self.rate_limiter.record(winner.type, now=now)
         self.voice.speak(advice)
+        self._recent_advice.append((winner.type, advice))
         return self._record(
             advice,
             winner,

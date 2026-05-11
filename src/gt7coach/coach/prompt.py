@@ -7,7 +7,7 @@ varies per corner.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -34,6 +34,28 @@ Hard constraints on the response:
 - Never invent telemetry numbers; only use what's in the event evidence.
 - Never echo the driver style ("Smooth driver") or the event type
   ("late_brake") back as a response. Translate them into an action.
+
+When multiple events are listed for one corner, they're usually symptoms of
+ONE underlying mistake. Address the root cause, not every symptom. Example:
+wheelspin + oversteer + early_lift on exit usually means "too much
+throttle, too early" — coach that, not three different things.
+
+Vary your opening verb across consecutive corners. If the previous advice
+started with "Carry", don't start the next one with "Carry" too — switch
+to "Open", "Trail", "Settle", "Roll", etc. The driver has heard the
+previous advice; you can see it in the "Recent advice" block when present.
+
+Examples of GOOD responses:
+- "Carry throttle through the apex; you're lifting too soon."
+- "Trail the brake gently — let it rotate the car."
+- "Open the wheel earlier on exit so the tyres bite."
+- "Wait for the rear to settle before reapplying power."
+
+Examples of BAD responses:
+- "Carry throttle" (sentence fragment)
+- "Smooth driver" (echoes the style hint)
+- "throttle.early_lift" (echoes the event type)
+- "Good job, remember to brake earlier next time" (filler)
 """
 
 
@@ -57,17 +79,41 @@ def _summarise_evidence(evidence: dict) -> str:
     return ", ".join(parts)
 
 
-def build_user_prompt(events: Iterable[Event], context: CornerContext, driver_style: str) -> str:
-    """Compose the per-corner user-message body."""
+def build_user_prompt(
+    events: Iterable[Event],
+    context: CornerContext,
+    driver_style: str,
+    *,
+    recent_advice: Sequence[tuple[str, str]] | None = None,
+) -> str:
+    """Compose the per-corner user-message body.
+
+    Args:
+        events: Up to 3 detected events for this corner, severity-sorted.
+        context: Corner-level summary (speed range, peak G, type, etc.).
+        driver_style: ``smooth`` / ``aggressive`` / ``learning``.
+        recent_advice: Last few (event_type, advice_text) pairs from this
+            session, so the LLM can vary phrasing across consecutive corners.
+    """
     events_lines = "\n".join(
         f"- {e.type} (severity {e.severity:.2f}): {_summarise_evidence(e.evidence)}" for e in events
     )
     style_hint = _STYLE_HINTS.get(driver_style.lower(), "")
-    return (
-        f"Driver style: {driver_style}. {style_hint}\n"
-        f"Corner: peak {context.peak_lat_g:.1f}g lat, "
-        f"min speed {context.min_speed_kmh:.0f} km/h, "
-        f"duration {context.duration_s:.1f}s.\n"
-        f"Detected events:\n{events_lines}\n"
-        f"Respond with ONE imperative coaching sentence, max 12 words."
-    )
+    blocks = [
+        f"Driver style: {driver_style}. {style_hint}",
+        (
+            f"Corner: {context.corner_type}, peak {context.peak_lat_g:.1f}g lat, "
+            f"min speed {context.min_speed_kmh:.0f} km/h, "
+            f"yaw turned {context.total_yaw_deg:.0f}°, "
+            f"duration {context.duration_s:.1f}s."
+        ),
+        f"Detected events:\n{events_lines}",
+    ]
+    if recent_advice:
+        recent_lines = "\n".join(f"- [{kind}] {text}" for kind, text in recent_advice)
+        blocks.append(
+            "Recent advice in this session (DO NOT repeat verbatim, vary your verb):\n"
+            f"{recent_lines}"
+        )
+    blocks.append("Respond with ONE imperative coaching sentence, max 12 words.")
+    return "\n".join(blocks)
