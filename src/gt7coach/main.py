@@ -39,6 +39,7 @@ from gt7coach.detectors import (
     detect_understeer,
     detect_wheelspin,
 )
+from gt7coach.session import SessionLogger
 from gt7coach.telemetry import Packet, Receiver, ReceiverConfig, replay_csv
 from gt7coach.voice import make_voice
 
@@ -145,6 +146,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     p.add_argument("--voice-rate", type=int, default=230)
 
+    # Session logging.
+    p.add_argument(
+        "--log-dir",
+        type=Path,
+        default=Path("./sessions"),
+        help="Where to write per-run session logs (default: ./sessions)",
+    )
+    p.add_argument(
+        "--no-log",
+        action="store_true",
+        help="Disable session logging entirely",
+    )
+
     # Misc.
     p.add_argument("--env-file", type=Path, default=None, help="Path to .env (default: ./.env)")
     p.add_argument("-v", "--verbose", action="store_true")
@@ -190,6 +204,14 @@ def main(argv: list[str] | None = None) -> int:
     else:
         stream, rx = _stream_replay(args)
 
+    session: SessionLogger | None = None
+    if not args.no_log:
+        session = SessionLogger(args.log_dir, cli_args=vars(args).copy())
+        # Path objects aren't JSON-serialisable; stringify the few that snuck in.
+        for k, v in list(session._cli_args.items()):
+            if isinstance(v, Path):
+                session._cli_args[k] = str(v)
+
     def _shutdown(_signum: int, _frame: FrameType | None) -> None:
         log.info("shutdown signal — draining")
         if rx is not None:
@@ -202,6 +224,8 @@ def main(argv: list[str] | None = None) -> int:
     corner_idx = 0
     try:
         for packet in stream:
+            if session is not None:
+                session.log_packet(packet)
             trace = seg.feed(packet)
             if trace is None:
                 continue
@@ -217,14 +241,26 @@ def main(argv: list[str] | None = None) -> int:
                 trace.peak_lat_g,
                 len(events),
             )
-            advisor.on_corner(trace, events)
+            if session is not None:
+                session.log_corner(corner_idx, trace, events)
+            result = advisor.on_corner(trace, events)
+            if session is not None:
+                session.log_advisor(corner_idx, trace, result)
         trailing = seg.flush()
         if trailing is not None:
-            advisor.on_corner(trailing, _run_detectors(trailing))
+            corner_idx += 1
+            trailing_events = _run_detectors(trailing)
+            if session is not None:
+                session.log_corner(corner_idx, trailing, trailing_events)
+            result = advisor.on_corner(trailing, trailing_events)
+            if session is not None:
+                session.log_advisor(corner_idx, trailing, result)
     finally:
         if rx is not None:
             rx.stop()
         voice.stop()
+        if session is not None:
+            session.close()
 
     return 0
 
