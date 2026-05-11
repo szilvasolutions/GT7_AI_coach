@@ -1,0 +1,73 @@
+# Secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# Session data (telemetry recordings can be large and may contain personal info)
+sessions/
+*.csv
+!tests/fixtures/*.csv
+*.gtr
+*.gtz
+
+# Logs
+*.log
+gt7_debug_log_*.txt
+gt7_ai_log_*.txt
+gt7_session_*.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build artifacts
+*.spec
+dist/
+build/
+
+# OS
+Thumbs.db
+desktop.ini

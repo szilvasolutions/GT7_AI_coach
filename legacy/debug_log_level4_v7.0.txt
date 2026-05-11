@@ -1,0 +1,1281 @@
+[18:22:59] INFO: --- SYSTEM STARTUP INITIATED ---
+[18:22:59] INFO: --- GT7 AI COACH: ULTIMATE EDITION (V7.0) ---
+[18:23:03] INFO: AI CONFIG: Level 4 | Trigger > 0.8G
+[18:23:03] INFO: \U0001f4c2 CSV LOG: gt7_session_20260111_182303.csv
+[18:23:03] DEBUG: Bound to IP: 192.168.1.118
+[18:23:03] INFO: Waiting for Data...
+[18:23:18] DEBUG: Analyzing Turn (ID: 20260111_182318)...
+[18:23:18] INFO: AFC is enabled with max remote calls: 10.
+[18:23:18] DEBUG: connect_tcp.started host='generativelanguage.googleapis.com' port=443 local_address=None timeout=None socket_options=None
+[18:23:18] DEBUG: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001BBFB55CAD0>
+[18:23:18] DEBUG: start_tls.started ssl_context=<ssl.SSLContext object at 0x000001BBFB0B7D10> server_hostname='generativelanguage.googleapis.com' timeout=None
+[18:23:18] DEBUG: start_tls.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001BBFB4E1E50>
+[18:23:18] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:18] DEBUG: send_request_headers.complete
+[18:23:18] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:18] DEBUG: send_request_body.complete
+[18:23:18] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:19] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:19 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=590'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:19] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:19] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:19] DEBUG: receive_response_body.complete
+[18:23:19] DEBUG: response_closed.started
+[18:23:19] DEBUG: response_closed.complete
+[18:23:19] DEBUG: Analyzing Turn (ID: 20260111_182319)...
+[18:23:19] INFO: AFC is enabled with max remote calls: 10.
+[18:23:19] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:19] DEBUG: send_request_headers.complete
+[18:23:19] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:19] DEBUG: send_request_body.complete
+[18:23:19] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:19] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:19 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=695'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:19] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:19] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:19] DEBUG: receive_response_body.complete
+[18:23:19] DEBUG: response_closed.started
+[18:23:19] DEBUG: response_closed.complete
+[18:23:19] DEBUG: Analyzing Turn (ID: 20260111_182319)...
+[18:23:19] INFO: AFC is enabled with max remote calls: 10.
+[18:23:19] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:19] DEBUG: send_request_headers.complete
+[18:23:19] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:19] DEBUG: send_request_body.complete
+[18:23:19] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:20] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:20 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=573'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:20] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:20] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:20] DEBUG: receive_response_body.complete
+[18:23:20] DEBUG: response_closed.started
+[18:23:20] DEBUG: response_closed.complete
+[18:23:20] DEBUG: Analyzing Turn (ID: 20260111_182320)...
+[18:23:20] INFO: AFC is enabled with max remote calls: 10.
+[18:23:20] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:20] DEBUG: send_request_headers.complete
+[18:23:20] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:20] DEBUG: send_request_body.complete
+[18:23:20] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:21] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:20 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=509'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:21] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:21] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:21] DEBUG: receive_response_body.complete
+[18:23:21] DEBUG: response_closed.started
+[18:23:21] DEBUG: response_closed.complete
+[18:23:21] DEBUG: Analyzing Turn (ID: 20260111_182321)...
+[18:23:21] INFO: AFC is enabled with max remote calls: 10.
+[18:23:21] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:21] DEBUG: send_request_headers.complete
+[18:23:21] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:21] DEBUG: send_request_body.complete
+[18:23:21] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:21] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:21 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=620'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:21] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:21] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:21] DEBUG: receive_response_body.complete
+[18:23:21] DEBUG: response_closed.started
+[18:23:21] DEBUG: response_closed.complete
+[18:23:21] DEBUG: Analyzing Turn (ID: 20260111_182321)...
+[18:23:21] INFO: AFC is enabled with max remote calls: 10.
+[18:23:21] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:21] DEBUG: send_request_headers.complete
+[18:23:21] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:21] DEBUG: send_request_body.complete
+[18:23:21] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:22] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:21 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=412'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:22] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:22] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:22] DEBUG: receive_response_body.complete
+[18:23:22] DEBUG: response_closed.started
+[18:23:22] DEBUG: response_closed.complete
+[18:23:22] DEBUG: Analyzing Turn (ID: 20260111_182322)...
+[18:23:22] INFO: AFC is enabled with max remote calls: 10.
+[18:23:22] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:22] DEBUG: send_request_headers.complete
+[18:23:22] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:22] DEBUG: send_request_body.complete
+[18:23:22] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:22] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:22 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=470'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:22] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:22] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:22] DEBUG: receive_response_body.complete
+[18:23:22] DEBUG: response_closed.started
+[18:23:22] DEBUG: response_closed.complete
+[18:23:23] DEBUG: Analyzing Turn (ID: 20260111_182323)...
+[18:23:23] INFO: AFC is enabled with max remote calls: 10.
+[18:23:23] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:23] DEBUG: send_request_headers.complete
+[18:23:23] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:23] DEBUG: send_request_body.complete
+[18:23:23] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:23] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:23 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=670'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:23] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:23] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:23] DEBUG: receive_response_body.complete
+[18:23:23] DEBUG: response_closed.started
+[18:23:23] DEBUG: response_closed.complete
+[18:23:23] DEBUG: Analyzing Turn (ID: 20260111_182323)...
+[18:23:23] INFO: AFC is enabled with max remote calls: 10.
+[18:23:23] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:23] DEBUG: send_request_headers.complete
+[18:23:23] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:23] DEBUG: send_request_body.complete
+[18:23:23] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:24] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:24 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=436'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:24] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:24] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:24] DEBUG: receive_response_body.complete
+[18:23:24] DEBUG: response_closed.started
+[18:23:24] DEBUG: response_closed.complete
+[18:23:27] DEBUG: Analyzing Turn (ID: 20260111_182327)...
+[18:23:27] INFO: AFC is enabled with max remote calls: 10.
+[18:23:27] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:27] DEBUG: send_request_headers.complete
+[18:23:27] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:27] DEBUG: send_request_body.complete
+[18:23:27] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:27] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:27 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=524'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:27] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:27] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:27] DEBUG: receive_response_body.complete
+[18:23:27] DEBUG: response_closed.started
+[18:23:27] DEBUG: response_closed.complete
+[18:23:27] DEBUG: Analyzing Turn (ID: 20260111_182327)...
+[18:23:27] INFO: AFC is enabled with max remote calls: 10.
+[18:23:27] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:27] DEBUG: send_request_headers.complete
+[18:23:27] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:27] DEBUG: send_request_body.complete
+[18:23:27] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:28] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:28 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=605'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:28] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:28] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:28] DEBUG: receive_response_body.complete
+[18:23:28] DEBUG: response_closed.started
+[18:23:28] DEBUG: response_closed.complete
+[18:23:30] DEBUG: Analyzing Turn (ID: 20260111_182330)...
+[18:23:30] INFO: AFC is enabled with max remote calls: 10.
+[18:23:30] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:30] DEBUG: send_request_headers.complete
+[18:23:30] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:30] DEBUG: send_request_body.complete
+[18:23:30] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:30] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:30 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=559'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:30] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:30] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:30] DEBUG: receive_response_body.complete
+[18:23:30] DEBUG: response_closed.started
+[18:23:30] DEBUG: response_closed.complete
+[18:23:34] DEBUG: Analyzing Turn (ID: 20260111_182334)...
+[18:23:34] INFO: AFC is enabled with max remote calls: 10.
+[18:23:34] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:34] DEBUG: send_request_headers.complete
+[18:23:34] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:34] DEBUG: send_request_body.complete
+[18:23:34] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:34] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:34 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=487'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:34] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:34] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:34] DEBUG: receive_response_body.complete
+[18:23:34] DEBUG: response_closed.started
+[18:23:34] DEBUG: response_closed.complete
+[18:23:34] DEBUG: Analyzing Turn (ID: 20260111_182334)...
+[18:23:34] INFO: AFC is enabled with max remote calls: 10.
+[18:23:34] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:34] DEBUG: send_request_headers.complete
+[18:23:34] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:34] DEBUG: send_request_body.complete
+[18:23:34] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:35] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:35 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=540'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:35] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:35] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:35] DEBUG: receive_response_body.complete
+[18:23:35] DEBUG: response_closed.started
+[18:23:35] DEBUG: response_closed.complete
+[18:23:35] DEBUG: Analyzing Turn (ID: 20260111_182335)...
+[18:23:35] INFO: AFC is enabled with max remote calls: 10.
+[18:23:35] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:35] DEBUG: send_request_headers.complete
+[18:23:35] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:35] DEBUG: send_request_body.complete
+[18:23:35] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:35] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:35 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=620'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:35] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:35] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:35] DEBUG: receive_response_body.complete
+[18:23:35] DEBUG: response_closed.started
+[18:23:35] DEBUG: response_closed.complete
+[18:23:39] DEBUG: Analyzing Turn (ID: 20260111_182339)...
+[18:23:39] INFO: AFC is enabled with max remote calls: 10.
+[18:23:39] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:39] DEBUG: send_request_headers.complete
+[18:23:39] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:39] DEBUG: send_request_body.complete
+[18:23:39] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:40] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:40 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=638'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:40] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:40] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:40] DEBUG: receive_response_body.complete
+[18:23:40] DEBUG: response_closed.started
+[18:23:40] DEBUG: response_closed.complete
+[18:23:41] DEBUG: Analyzing Turn (ID: 20260111_182341)...
+[18:23:41] INFO: AFC is enabled with max remote calls: 10.
+[18:23:41] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:41] DEBUG: send_request_headers.complete
+[18:23:41] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:41] DEBUG: send_request_body.complete
+[18:23:41] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:41] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:41 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=373'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:41] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:41] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:41] DEBUG: receive_response_body.complete
+[18:23:41] DEBUG: response_closed.started
+[18:23:41] DEBUG: response_closed.complete
+[18:23:42] DEBUG: Analyzing Turn (ID: 20260111_182342)...
+[18:23:42] INFO: AFC is enabled with max remote calls: 10.
+[18:23:42] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:42] DEBUG: send_request_headers.complete
+[18:23:42] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:42] DEBUG: send_request_body.complete
+[18:23:42] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:42] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:42 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=398'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:42] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:42] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:42] DEBUG: receive_response_body.complete
+[18:23:42] DEBUG: response_closed.started
+[18:23:42] DEBUG: response_closed.complete
+[18:23:44] DEBUG: Analyzing Turn (ID: 20260111_182344)...
+[18:23:44] INFO: AFC is enabled with max remote calls: 10.
+[18:23:44] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:44] DEBUG: send_request_headers.complete
+[18:23:44] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:44] DEBUG: send_request_body.complete
+[18:23:44] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:44] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:44 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=541'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:44] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:44] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:44] DEBUG: receive_response_body.complete
+[18:23:44] DEBUG: response_closed.started
+[18:23:44] DEBUG: response_closed.complete
+[18:23:44] DEBUG: Analyzing Turn (ID: 20260111_182344)...
+[18:23:44] INFO: AFC is enabled with max remote calls: 10.
+[18:23:44] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:44] DEBUG: send_request_headers.complete
+[18:23:44] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:44] DEBUG: send_request_body.complete
+[18:23:44] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:45] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:45 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=635'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:45] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:45] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:45] DEBUG: receive_response_body.complete
+[18:23:45] DEBUG: response_closed.started
+[18:23:45] DEBUG: response_closed.complete
+[18:23:45] DEBUG: Analyzing Turn (ID: 20260111_182345)...
+[18:23:45] INFO: AFC is enabled with max remote calls: 10.
+[18:23:45] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:45] DEBUG: send_request_headers.complete
+[18:23:45] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:45] DEBUG: send_request_body.complete
+[18:23:45] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:46] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:45 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=465'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:46] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:46] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:46] DEBUG: receive_response_body.complete
+[18:23:46] DEBUG: response_closed.started
+[18:23:46] DEBUG: response_closed.complete
+[18:23:51] DEBUG: Analyzing Turn (ID: 20260111_182351)...
+[18:23:51] INFO: AFC is enabled with max remote calls: 10.
+[18:23:51] DEBUG: close.started
+[18:23:51] DEBUG: close.complete
+[18:23:51] DEBUG: connect_tcp.started host='generativelanguage.googleapis.com' port=443 local_address=None timeout=None socket_options=None
+[18:23:51] DEBUG: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001BBFB4E1A90>
+[18:23:51] DEBUG: start_tls.started ssl_context=<ssl.SSLContext object at 0x000001BBFB0B7D10> server_hostname='generativelanguage.googleapis.com' timeout=None
+[18:23:51] DEBUG: start_tls.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001BBFB4BED70>
+[18:23:51] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:51] DEBUG: send_request_headers.complete
+[18:23:51] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:51] DEBUG: send_request_body.complete
+[18:23:51] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:51] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:51 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=425'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:51] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:51] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:51] DEBUG: receive_response_body.complete
+[18:23:51] DEBUG: response_closed.started
+[18:23:51] DEBUG: response_closed.complete
+[18:23:51] DEBUG: Analyzing Turn (ID: 20260111_182351)...
+[18:23:51] INFO: AFC is enabled with max remote calls: 10.
+[18:23:51] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:51] DEBUG: send_request_headers.complete
+[18:23:51] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:51] DEBUG: send_request_body.complete
+[18:23:51] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:52] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:52 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=407'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:52] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:52] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:52] DEBUG: receive_response_body.complete
+[18:23:52] DEBUG: response_closed.started
+[18:23:52] DEBUG: response_closed.complete
+[18:23:56] DEBUG: Analyzing Turn (ID: 20260111_182356)...
+[18:23:56] INFO: AFC is enabled with max remote calls: 10.
+[18:23:56] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:56] DEBUG: send_request_headers.complete
+[18:23:56] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:56] DEBUG: send_request_body.complete
+[18:23:56] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:56] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:56 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=425'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:56] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:56] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:56] DEBUG: receive_response_body.complete
+[18:23:56] DEBUG: response_closed.started
+[18:23:56] DEBUG: response_closed.complete
+[18:23:57] DEBUG: Analyzing Turn (ID: 20260111_182357)...
+[18:23:57] INFO: AFC is enabled with max remote calls: 10.
+[18:23:57] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:57] DEBUG: send_request_headers.complete
+[18:23:57] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:57] DEBUG: send_request_body.complete
+[18:23:57] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:57] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:57 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=532'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:57] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:57] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:57] DEBUG: receive_response_body.complete
+[18:23:57] DEBUG: response_closed.started
+[18:23:57] DEBUG: response_closed.complete
+[18:23:57] DEBUG: Analyzing Turn (ID: 20260111_182357)...
+[18:23:57] INFO: AFC is enabled with max remote calls: 10.
+[18:23:57] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:57] DEBUG: send_request_headers.complete
+[18:23:57] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:57] DEBUG: send_request_body.complete
+[18:23:57] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:58] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:57 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=610'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:58] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:58] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:58] DEBUG: receive_response_body.complete
+[18:23:58] DEBUG: response_closed.started
+[18:23:58] DEBUG: response_closed.complete
+[18:23:58] DEBUG: Analyzing Turn (ID: 20260111_182358)...
+[18:23:58] INFO: AFC is enabled with max remote calls: 10.
+[18:23:58] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:58] DEBUG: send_request_headers.complete
+[18:23:58] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:58] DEBUG: send_request_body.complete
+[18:23:58] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:58] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:58 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=565'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:58] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:58] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:58] DEBUG: receive_response_body.complete
+[18:23:58] DEBUG: response_closed.started
+[18:23:58] DEBUG: response_closed.complete
+[18:23:58] DEBUG: Analyzing Turn (ID: 20260111_182358)...
+[18:23:58] INFO: AFC is enabled with max remote calls: 10.
+[18:23:58] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:58] DEBUG: send_request_headers.complete
+[18:23:58] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:58] DEBUG: send_request_body.complete
+[18:23:58] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:59] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:59 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=548'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:59] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:59] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:59] DEBUG: receive_response_body.complete
+[18:23:59] DEBUG: response_closed.started
+[18:23:59] DEBUG: response_closed.complete
+[18:23:59] DEBUG: Analyzing Turn (ID: 20260111_182359)...
+[18:23:59] INFO: AFC is enabled with max remote calls: 10.
+[18:23:59] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:59] DEBUG: send_request_headers.complete
+[18:23:59] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:59] DEBUG: send_request_body.complete
+[18:23:59] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:23:59] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:23:59 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=552'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:23:59] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:23:59] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:23:59] DEBUG: receive_response_body.complete
+[18:23:59] DEBUG: response_closed.started
+[18:23:59] DEBUG: response_closed.complete
+[18:23:59] DEBUG: Analyzing Turn (ID: 20260111_182359)...
+[18:23:59] INFO: AFC is enabled with max remote calls: 10.
+[18:23:59] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:23:59] DEBUG: send_request_headers.complete
+[18:23:59] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:23:59] DEBUG: send_request_body.complete
+[18:23:59] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:00] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:00 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=562'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:00] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:00] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:00] DEBUG: receive_response_body.complete
+[18:24:00] DEBUG: response_closed.started
+[18:24:00] DEBUG: response_closed.complete
+[18:24:00] DEBUG: Analyzing Turn (ID: 20260111_182400)...
+[18:24:00] INFO: AFC is enabled with max remote calls: 10.
+[18:24:00] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:00] DEBUG: send_request_headers.complete
+[18:24:00] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:00] DEBUG: send_request_body.complete
+[18:24:00] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:01] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:00 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=525'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:01] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:01] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:01] DEBUG: receive_response_body.complete
+[18:24:01] DEBUG: response_closed.started
+[18:24:01] DEBUG: response_closed.complete
+[18:24:01] DEBUG: Analyzing Turn (ID: 20260111_182401)...
+[18:24:01] INFO: AFC is enabled with max remote calls: 10.
+[18:24:01] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:01] DEBUG: send_request_headers.complete
+[18:24:01] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:01] DEBUG: send_request_body.complete
+[18:24:01] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:01] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:01 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=553'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:01] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:01] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:01] DEBUG: receive_response_body.complete
+[18:24:01] DEBUG: response_closed.started
+[18:24:01] DEBUG: response_closed.complete
+[18:24:01] DEBUG: Analyzing Turn (ID: 20260111_182401)...
+[18:24:01] INFO: AFC is enabled with max remote calls: 10.
+[18:24:01] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:01] DEBUG: send_request_headers.complete
+[18:24:01] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:01] DEBUG: send_request_body.complete
+[18:24:01] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:02] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:02 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=560'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:02] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:02] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:02] DEBUG: receive_response_body.complete
+[18:24:02] DEBUG: response_closed.started
+[18:24:02] DEBUG: response_closed.complete
+[18:24:02] DEBUG: Analyzing Turn (ID: 20260111_182402)...
+[18:24:02] INFO: AFC is enabled with max remote calls: 10.
+[18:24:02] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:02] DEBUG: send_request_headers.complete
+[18:24:02] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:02] DEBUG: send_request_body.complete
+[18:24:02] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:02] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:02 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=532'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:02] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:02] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:02] DEBUG: receive_response_body.complete
+[18:24:02] DEBUG: response_closed.started
+[18:24:02] DEBUG: response_closed.complete
+[18:24:02] DEBUG: Analyzing Turn (ID: 20260111_182402)...
+[18:24:02] INFO: AFC is enabled with max remote calls: 10.
+[18:24:02] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:02] DEBUG: send_request_headers.complete
+[18:24:02] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:02] DEBUG: send_request_body.complete
+[18:24:02] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:03] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:03 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=527'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:03] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:03] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:03] DEBUG: receive_response_body.complete
+[18:24:03] DEBUG: response_closed.started
+[18:24:03] DEBUG: response_closed.complete
+[18:24:03] DEBUG: Analyzing Turn (ID: 20260111_182403)...
+[18:24:03] INFO: AFC is enabled with max remote calls: 10.
+[18:24:03] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:03] DEBUG: send_request_headers.complete
+[18:24:03] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:03] DEBUG: send_request_body.complete
+[18:24:03] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:03] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:03 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=479'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:03] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:03] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:03] DEBUG: receive_response_body.complete
+[18:24:03] DEBUG: response_closed.started
+[18:24:03] DEBUG: response_closed.complete
+[18:24:03] DEBUG: Analyzing Turn (ID: 20260111_182403)...
+[18:24:03] INFO: AFC is enabled with max remote calls: 10.
+[18:24:03] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:03] DEBUG: send_request_headers.complete
+[18:24:03] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:03] DEBUG: send_request_body.complete
+[18:24:03] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:04] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:04 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=399'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:04] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:04] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:04] DEBUG: receive_response_body.complete
+[18:24:04] DEBUG: response_closed.started
+[18:24:04] DEBUG: response_closed.complete
+[18:24:04] DEBUG: Analyzing Turn (ID: 20260111_182404)...
+[18:24:04] INFO: AFC is enabled with max remote calls: 10.
+[18:24:04] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:04] DEBUG: send_request_headers.complete
+[18:24:04] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:04] DEBUG: send_request_body.complete
+[18:24:04] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:04] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:04 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=370'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:04] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:04] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:04] DEBUG: receive_response_body.complete
+[18:24:04] DEBUG: response_closed.started
+[18:24:04] DEBUG: response_closed.complete
+[18:24:04] DEBUG: Analyzing Turn (ID: 20260111_182404)...
+[18:24:04] INFO: AFC is enabled with max remote calls: 10.
+[18:24:04] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:04] DEBUG: send_request_headers.complete
+[18:24:04] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:04] DEBUG: send_request_body.complete
+[18:24:04] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:05] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:04 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=418'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:05] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:05] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:05] DEBUG: receive_response_body.complete
+[18:24:05] DEBUG: response_closed.started
+[18:24:05] DEBUG: response_closed.complete
+[18:24:05] DEBUG: Analyzing Turn (ID: 20260111_182405)...
+[18:24:05] INFO: AFC is enabled with max remote calls: 10.
+[18:24:05] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:05] DEBUG: send_request_headers.complete
+[18:24:05] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:05] DEBUG: send_request_body.complete
+[18:24:05] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:05] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:05 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=406'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:05] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:05] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:05] DEBUG: receive_response_body.complete
+[18:24:05] DEBUG: response_closed.started
+[18:24:05] DEBUG: response_closed.complete
+[18:24:05] DEBUG: Analyzing Turn (ID: 20260111_182405)...
+[18:24:05] INFO: AFC is enabled with max remote calls: 10.
+[18:24:05] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:05] DEBUG: send_request_headers.complete
+[18:24:05] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:05] DEBUG: send_request_body.complete
+[18:24:05] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:06] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:05 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=393'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:06] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:06] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:06] DEBUG: receive_response_body.complete
+[18:24:06] DEBUG: response_closed.started
+[18:24:06] DEBUG: response_closed.complete
+[18:24:06] DEBUG: Analyzing Turn (ID: 20260111_182406)...
+[18:24:06] INFO: AFC is enabled with max remote calls: 10.
+[18:24:06] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:06] DEBUG: send_request_headers.complete
+[18:24:06] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:06] DEBUG: send_request_body.complete
+[18:24:06] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:06] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:06 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=327'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:06] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:06] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:06] DEBUG: receive_response_body.complete
+[18:24:06] DEBUG: response_closed.started
+[18:24:06] DEBUG: response_closed.complete
+[18:24:06] DEBUG: Analyzing Turn (ID: 20260111_182406)...
+[18:24:06] INFO: AFC is enabled with max remote calls: 10.
+[18:24:06] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:06] DEBUG: send_request_headers.complete
+[18:24:06] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:06] DEBUG: send_request_body.complete
+[18:24:06] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:06] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:06 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=394'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:06] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:06] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:06] DEBUG: receive_response_body.complete
+[18:24:06] DEBUG: response_closed.started
+[18:24:06] DEBUG: response_closed.complete
+[18:24:06] DEBUG: Analyzing Turn (ID: 20260111_182406)...
+[18:24:06] INFO: AFC is enabled with max remote calls: 10.
+[18:24:06] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:06] DEBUG: send_request_headers.complete
+[18:24:06] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:06] DEBUG: send_request_body.complete
+[18:24:06] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:07] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:06 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=347'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:07] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:07] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:07] DEBUG: receive_response_body.complete
+[18:24:07] DEBUG: response_closed.started
+[18:24:07] DEBUG: response_closed.complete
+[18:24:07] DEBUG: Analyzing Turn (ID: 20260111_182407)...
+[18:24:07] INFO: AFC is enabled with max remote calls: 10.
+[18:24:07] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:07] DEBUG: send_request_headers.complete
+[18:24:07] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:07] DEBUG: send_request_body.complete
+[18:24:07] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:07] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:07 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=429'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:07] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:07] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:07] DEBUG: receive_response_body.complete
+[18:24:07] DEBUG: response_closed.started
+[18:24:07] DEBUG: response_closed.complete
+[18:24:07] DEBUG: Analyzing Turn (ID: 20260111_182407)...
+[18:24:07] INFO: AFC is enabled with max remote calls: 10.
+[18:24:07] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:07] DEBUG: send_request_headers.complete
+[18:24:07] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:07] DEBUG: send_request_body.complete
+[18:24:07] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:08] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:07 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=358'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:08] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:08] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:08] DEBUG: receive_response_body.complete
+[18:24:08] DEBUG: response_closed.started
+[18:24:08] DEBUG: response_closed.complete
+[18:24:08] DEBUG: Analyzing Turn (ID: 20260111_182408)...
+[18:24:08] INFO: AFC is enabled with max remote calls: 10.
+[18:24:08] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:08] DEBUG: send_request_headers.complete
+[18:24:08] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:08] DEBUG: send_request_body.complete
+[18:24:08] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:08] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:08 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=420'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:08] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:08] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:08] DEBUG: receive_response_body.complete
+[18:24:08] DEBUG: response_closed.started
+[18:24:08] DEBUG: response_closed.complete
+[18:24:08] DEBUG: Analyzing Turn (ID: 20260111_182408)...
+[18:24:08] INFO: AFC is enabled with max remote calls: 10.
+[18:24:08] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:08] DEBUG: send_request_headers.complete
+[18:24:08] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:08] DEBUG: send_request_body.complete
+[18:24:08] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:08] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:08 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=323'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:08] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:08] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:08] DEBUG: receive_response_body.complete
+[18:24:08] DEBUG: response_closed.started
+[18:24:08] DEBUG: response_closed.complete
+[18:24:08] DEBUG: Analyzing Turn (ID: 20260111_182408)...
+[18:24:08] INFO: AFC is enabled with max remote calls: 10.
+[18:24:08] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:08] DEBUG: send_request_headers.complete
+[18:24:08] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:08] DEBUG: send_request_body.complete
+[18:24:08] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:09] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:08 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=369'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:09] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:09] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:09] DEBUG: receive_response_body.complete
+[18:24:09] DEBUG: response_closed.started
+[18:24:09] DEBUG: response_closed.complete
+[18:24:09] DEBUG: Analyzing Turn (ID: 20260111_182409)...
+[18:24:09] INFO: AFC is enabled with max remote calls: 10.
+[18:24:09] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:09] DEBUG: send_request_headers.complete
+[18:24:09] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:09] DEBUG: send_request_body.complete
+[18:24:09] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:09] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:09 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=362'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:09] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:09] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:09] DEBUG: receive_response_body.complete
+[18:24:09] DEBUG: response_closed.started
+[18:24:09] DEBUG: response_closed.complete
+[18:24:09] DEBUG: Analyzing Turn (ID: 20260111_182409)...
+[18:24:09] INFO: AFC is enabled with max remote calls: 10.
+[18:24:09] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:09] DEBUG: send_request_headers.complete
+[18:24:09] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:09] DEBUG: send_request_body.complete
+[18:24:09] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:09] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:09 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=374'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:09] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:09] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:09] DEBUG: receive_response_body.complete
+[18:24:09] DEBUG: response_closed.started
+[18:24:09] DEBUG: response_closed.complete
+[18:24:09] DEBUG: Analyzing Turn (ID: 20260111_182409)...
+[18:24:09] INFO: AFC is enabled with max remote calls: 10.
+[18:24:09] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:09] DEBUG: send_request_headers.complete
+[18:24:09] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:09] DEBUG: send_request_body.complete
+[18:24:09] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:10] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:10 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=393'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:10] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:10] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:10] DEBUG: receive_response_body.complete
+[18:24:10] DEBUG: response_closed.started
+[18:24:10] DEBUG: response_closed.complete
+[18:24:10] DEBUG: Analyzing Turn (ID: 20260111_182410)...
+[18:24:10] INFO: AFC is enabled with max remote calls: 10.
+[18:24:10] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:10] DEBUG: send_request_headers.complete
+[18:24:10] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:10] DEBUG: send_request_body.complete
+[18:24:10] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:10] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:10 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=342'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:10] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:10] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:10] DEBUG: receive_response_body.complete
+[18:24:10] DEBUG: response_closed.started
+[18:24:10] DEBUG: response_closed.complete
+[18:24:10] DEBUG: Analyzing Turn (ID: 20260111_182410)...
+[18:24:10] INFO: AFC is enabled with max remote calls: 10.
+[18:24:10] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:10] DEBUG: send_request_headers.complete
+[18:24:10] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:10] DEBUG: send_request_body.complete
+[18:24:10] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:11] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:10 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=392'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:11] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:11] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:11] DEBUG: receive_response_body.complete
+[18:24:11] DEBUG: response_closed.started
+[18:24:11] DEBUG: response_closed.complete
+[18:24:11] DEBUG: Analyzing Turn (ID: 20260111_182411)...
+[18:24:11] INFO: AFC is enabled with max remote calls: 10.
+[18:24:11] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:11] DEBUG: send_request_headers.complete
+[18:24:11] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:11] DEBUG: send_request_body.complete
+[18:24:11] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:11] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:11 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=449'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:11] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:11] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:11] DEBUG: receive_response_body.complete
+[18:24:11] DEBUG: response_closed.started
+[18:24:11] DEBUG: response_closed.complete
+[18:24:11] DEBUG: Analyzing Turn (ID: 20260111_182411)...
+[18:24:11] INFO: AFC is enabled with max remote calls: 10.
+[18:24:11] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:11] DEBUG: send_request_headers.complete
+[18:24:11] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:11] DEBUG: send_request_body.complete
+[18:24:11] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:12] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:11 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=346'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:12] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:12] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:12] DEBUG: receive_response_body.complete
+[18:24:12] DEBUG: response_closed.started
+[18:24:12] DEBUG: response_closed.complete
+[18:24:12] DEBUG: Analyzing Turn (ID: 20260111_182412)...
+[18:24:12] INFO: AFC is enabled with max remote calls: 10.
+[18:24:12] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:12] DEBUG: send_request_headers.complete
+[18:24:12] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:12] DEBUG: send_request_body.complete
+[18:24:12] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:12] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:12 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=352'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:12] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:12] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:12] DEBUG: receive_response_body.complete
+[18:24:12] DEBUG: response_closed.started
+[18:24:12] DEBUG: response_closed.complete
+[18:24:12] DEBUG: Analyzing Turn (ID: 20260111_182412)...
+[18:24:12] INFO: AFC is enabled with max remote calls: 10.
+[18:24:12] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:12] DEBUG: send_request_headers.complete
+[18:24:12] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:12] DEBUG: send_request_body.complete
+[18:24:12] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:12] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:12 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=466'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:12] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:12] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:12] DEBUG: receive_response_body.complete
+[18:24:12] DEBUG: response_closed.started
+[18:24:12] DEBUG: response_closed.complete
+[18:24:12] DEBUG: Analyzing Turn (ID: 20260111_182412)...
+[18:24:12] INFO: AFC is enabled with max remote calls: 10.
+[18:24:12] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:12] DEBUG: send_request_headers.complete
+[18:24:12] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:12] DEBUG: send_request_body.complete
+[18:24:12] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:13] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:13 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=353'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:13] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:13] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:13] DEBUG: receive_response_body.complete
+[18:24:13] DEBUG: response_closed.started
+[18:24:13] DEBUG: response_closed.complete
+[18:24:13] DEBUG: Analyzing Turn (ID: 20260111_182413)...
+[18:24:13] INFO: AFC is enabled with max remote calls: 10.
+[18:24:13] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:13] DEBUG: send_request_headers.complete
+[18:24:13] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:13] DEBUG: send_request_body.complete
+[18:24:13] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:13] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:13 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=616'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:13] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:13] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:13] DEBUG: receive_response_body.complete
+[18:24:13] DEBUG: response_closed.started
+[18:24:13] DEBUG: response_closed.complete
+[18:24:13] DEBUG: Analyzing Turn (ID: 20260111_182413)...
+[18:24:13] INFO: AFC is enabled with max remote calls: 10.
+[18:24:13] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:13] DEBUG: send_request_headers.complete
+[18:24:13] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:13] DEBUG: send_request_body.complete
+[18:24:13] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:14] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:14 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=359'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:14] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:14] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:14] DEBUG: receive_response_body.complete
+[18:24:14] DEBUG: response_closed.started
+[18:24:14] DEBUG: response_closed.complete
+[18:24:14] DEBUG: Analyzing Turn (ID: 20260111_182414)...
+[18:24:14] INFO: AFC is enabled with max remote calls: 10.
+[18:24:14] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:14] DEBUG: send_request_headers.complete
+[18:24:14] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:14] DEBUG: send_request_body.complete
+[18:24:14] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:14] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:14 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=402'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:14] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:14] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:14] DEBUG: receive_response_body.complete
+[18:24:14] DEBUG: response_closed.started
+[18:24:14] DEBUG: response_closed.complete
+[18:24:14] DEBUG: Analyzing Turn (ID: 20260111_182414)...
+[18:24:14] INFO: AFC is enabled with max remote calls: 10.
+[18:24:14] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:14] DEBUG: send_request_headers.complete
+[18:24:14] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:14] DEBUG: send_request_body.complete
+[18:24:14] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:15] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:14 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=456'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:15] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:15] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:15] DEBUG: receive_response_body.complete
+[18:24:15] DEBUG: response_closed.started
+[18:24:15] DEBUG: response_closed.complete
+[18:24:15] DEBUG: Analyzing Turn (ID: 20260111_182415)...
+[18:24:15] INFO: AFC is enabled with max remote calls: 10.
+[18:24:15] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:15] DEBUG: send_request_headers.complete
+[18:24:15] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:15] DEBUG: send_request_body.complete
+[18:24:15] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:15] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:15 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=418'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:15] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:15] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:15] DEBUG: receive_response_body.complete
+[18:24:15] DEBUG: response_closed.started
+[18:24:15] DEBUG: response_closed.complete
+[18:24:15] DEBUG: Analyzing Turn (ID: 20260111_182415)...
+[18:24:15] INFO: AFC is enabled with max remote calls: 10.
+[18:24:15] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:15] DEBUG: send_request_headers.complete
+[18:24:15] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:15] DEBUG: send_request_body.complete
+[18:24:15] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:16] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:15 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=397'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:16] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:16] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:16] DEBUG: receive_response_body.complete
+[18:24:16] DEBUG: response_closed.started
+[18:24:16] DEBUG: response_closed.complete
+[18:24:18] DEBUG: Analyzing Turn (ID: 20260111_182418)...
+[18:24:18] INFO: AFC is enabled with max remote calls: 10.
+[18:24:18] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:18] DEBUG: send_request_headers.complete
+[18:24:18] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:18] DEBUG: send_request_body.complete
+[18:24:18] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:19] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:19 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=589'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:19] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:19] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:19] DEBUG: receive_response_body.complete
+[18:24:19] DEBUG: response_closed.started
+[18:24:19] DEBUG: response_closed.complete
+[18:24:19] DEBUG: Analyzing Turn (ID: 20260111_182419)...
+[18:24:19] INFO: AFC is enabled with max remote calls: 10.
+[18:24:19] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:19] DEBUG: send_request_headers.complete
+[18:24:19] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:19] DEBUG: send_request_body.complete
+[18:24:19] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:20] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:19 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=627'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:20] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:20] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:20] DEBUG: receive_response_body.complete
+[18:24:20] DEBUG: response_closed.started
+[18:24:20] DEBUG: response_closed.complete
+[18:24:21] DEBUG: Analyzing Turn (ID: 20260111_182421)...
+[18:24:21] INFO: AFC is enabled with max remote calls: 10.
+[18:24:21] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:21] DEBUG: send_request_headers.complete
+[18:24:21] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:21] DEBUG: send_request_body.complete
+[18:24:21] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:21] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:21 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=428'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:21] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:21] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:21] DEBUG: receive_response_body.complete
+[18:24:21] DEBUG: response_closed.started
+[18:24:21] DEBUG: response_closed.complete
+[18:24:21] DEBUG: Analyzing Turn (ID: 20260111_182421)...
+[18:24:21] INFO: AFC is enabled with max remote calls: 10.
+[18:24:21] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:21] DEBUG: send_request_headers.complete
+[18:24:21] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:21] DEBUG: send_request_body.complete
+[18:24:21] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:22] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:22 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=441'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:22] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:22] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:22] DEBUG: receive_response_body.complete
+[18:24:22] DEBUG: response_closed.started
+[18:24:22] DEBUG: response_closed.complete
+[18:24:24] DEBUG: Analyzing Turn (ID: 20260111_182424)...
+[18:24:24] INFO: AFC is enabled with max remote calls: 10.
+[18:24:24] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:24] DEBUG: send_request_headers.complete
+[18:24:24] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:24] DEBUG: send_request_body.complete
+[18:24:24] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:25] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:24 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=730'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:25] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:25] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:25] DEBUG: receive_response_body.complete
+[18:24:25] DEBUG: response_closed.started
+[18:24:25] DEBUG: response_closed.complete
+[18:24:25] DEBUG: Analyzing Turn (ID: 20260111_182425)...
+[18:24:25] INFO: AFC is enabled with max remote calls: 10.
+[18:24:25] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:25] DEBUG: send_request_headers.complete
+[18:24:25] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:25] DEBUG: send_request_body.complete
+[18:24:25] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:25] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:25 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=506'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:25] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:25] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:25] DEBUG: receive_response_body.complete
+[18:24:25] DEBUG: response_closed.started
+[18:24:25] DEBUG: response_closed.complete
+[18:24:25] DEBUG: Analyzing Turn (ID: 20260111_182425)...
+[18:24:25] INFO: AFC is enabled with max remote calls: 10.
+[18:24:25] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:25] DEBUG: send_request_headers.complete
+[18:24:25] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:25] DEBUG: send_request_body.complete
+[18:24:25] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:26] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:26 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=523'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:26] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:26] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:26] DEBUG: receive_response_body.complete
+[18:24:26] DEBUG: response_closed.started
+[18:24:26] DEBUG: response_closed.complete
+[18:24:26] DEBUG: Analyzing Turn (ID: 20260111_182426)...
+[18:24:26] INFO: AFC is enabled with max remote calls: 10.
+[18:24:26] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:26] DEBUG: send_request_headers.complete
+[18:24:26] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:26] DEBUG: send_request_body.complete
+[18:24:26] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:26] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:26 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=560'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:26] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:26] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:26] DEBUG: receive_response_body.complete
+[18:24:26] DEBUG: response_closed.started
+[18:24:26] DEBUG: response_closed.complete
+[18:24:26] DEBUG: Analyzing Turn (ID: 20260111_182426)...
+[18:24:26] INFO: AFC is enabled with max remote calls: 10.
+[18:24:26] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:26] DEBUG: send_request_headers.complete
+[18:24:26] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:26] DEBUG: send_request_body.complete
+[18:24:26] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:27] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:27 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=555'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:27] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:27] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:27] DEBUG: receive_response_body.complete
+[18:24:27] DEBUG: response_closed.started
+[18:24:27] DEBUG: response_closed.complete
+[18:24:27] DEBUG: Analyzing Turn (ID: 20260111_182427)...
+[18:24:27] INFO: AFC is enabled with max remote calls: 10.
+[18:24:27] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:27] DEBUG: send_request_headers.complete
+[18:24:27] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:27] DEBUG: send_request_body.complete
+[18:24:27] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:28] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:27 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=634'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:28] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:28] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:28] DEBUG: receive_response_body.complete
+[18:24:28] DEBUG: response_closed.started
+[18:24:28] DEBUG: response_closed.complete
+[18:24:28] DEBUG: Analyzing Turn (ID: 20260111_182428)...
+[18:24:28] INFO: AFC is enabled with max remote calls: 10.
+[18:24:28] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:28] DEBUG: send_request_headers.complete
+[18:24:28] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:28] DEBUG: send_request_body.complete
+[18:24:28] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:29] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:28 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=411'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:29] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:29] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:29] DEBUG: receive_response_body.complete
+[18:24:29] DEBUG: response_closed.started
+[18:24:29] DEBUG: response_closed.complete
+[18:24:30] DEBUG: Analyzing Turn (ID: 20260111_182430)...
+[18:24:30] INFO: AFC is enabled with max remote calls: 10.
+[18:24:30] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:30] DEBUG: send_request_headers.complete
+[18:24:30] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:30] DEBUG: send_request_body.complete
+[18:24:30] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:31] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:30 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=642'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:31] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:31] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:31] DEBUG: receive_response_body.complete
+[18:24:31] DEBUG: response_closed.started
+[18:24:31] DEBUG: response_closed.complete
+[18:24:31] DEBUG: Analyzing Turn (ID: 20260111_182431)...
+[18:24:31] INFO: AFC is enabled with max remote calls: 10.
+[18:24:31] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:31] DEBUG: send_request_headers.complete
+[18:24:31] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:31] DEBUG: send_request_body.complete
+[18:24:31] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:31] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:31 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=564'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:31] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:31] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:31] DEBUG: receive_response_body.complete
+[18:24:31] DEBUG: response_closed.started
+[18:24:31] DEBUG: response_closed.complete
+[18:24:31] DEBUG: Analyzing Turn (ID: 20260111_182431)...
+[18:24:31] INFO: AFC is enabled with max remote calls: 10.
+[18:24:31] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:31] DEBUG: send_request_headers.complete
+[18:24:31] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:31] DEBUG: send_request_body.complete
+[18:24:31] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:32] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:32 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=641'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:32] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:32] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:32] DEBUG: receive_response_body.complete
+[18:24:32] DEBUG: response_closed.started
+[18:24:32] DEBUG: response_closed.complete
+[18:24:32] DEBUG: Analyzing Turn (ID: 20260111_182432)...
+[18:24:32] INFO: AFC is enabled with max remote calls: 10.
+[18:24:32] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:32] DEBUG: send_request_headers.complete
+[18:24:32] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:32] DEBUG: send_request_body.complete
+[18:24:32] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:33] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:32 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=654'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:33] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:33] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:33] DEBUG: receive_response_body.complete
+[18:24:33] DEBUG: response_closed.started
+[18:24:33] DEBUG: response_closed.complete
+[18:24:33] DEBUG: Analyzing Turn (ID: 20260111_182433)...
+[18:24:33] INFO: AFC is enabled with max remote calls: 10.
+[18:24:33] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:33] DEBUG: send_request_headers.complete
+[18:24:33] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:33] DEBUG: send_request_body.complete
+[18:24:33] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:33] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:33 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=612'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:33] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:33] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:33] DEBUG: receive_response_body.complete
+[18:24:33] DEBUG: response_closed.started
+[18:24:33] DEBUG: response_closed.complete
+[18:24:33] DEBUG: Analyzing Turn (ID: 20260111_182433)...
+[18:24:33] INFO: AFC is enabled with max remote calls: 10.
+[18:24:33] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:33] DEBUG: send_request_headers.complete
+[18:24:33] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:33] DEBUG: send_request_body.complete
+[18:24:33] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:34] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:34 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=552'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:34] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:34] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:34] DEBUG: receive_response_body.complete
+[18:24:34] DEBUG: response_closed.started
+[18:24:34] DEBUG: response_closed.complete
+[18:24:34] DEBUG: Analyzing Turn (ID: 20260111_182434)...
+[18:24:34] INFO: AFC is enabled with max remote calls: 10.
+[18:24:34] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:34] DEBUG: send_request_headers.complete
+[18:24:34] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:34] DEBUG: send_request_body.complete
+[18:24:34] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:35] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:35 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=677'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:35] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:35] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:35] DEBUG: receive_response_body.complete
+[18:24:35] DEBUG: response_closed.started
+[18:24:35] DEBUG: response_closed.complete
+[18:24:38] DEBUG: Analyzing Turn (ID: 20260111_182438)...
+[18:24:38] INFO: AFC is enabled with max remote calls: 10.
+[18:24:38] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:38] DEBUG: send_request_headers.complete
+[18:24:38] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:38] DEBUG: send_request_body.complete
+[18:24:38] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:39] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:38 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=367'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:39] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:39] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:39] DEBUG: receive_response_body.complete
+[18:24:39] DEBUG: response_closed.started
+[18:24:39] DEBUG: response_closed.complete
+[18:24:39] DEBUG: Analyzing Turn (ID: 20260111_182439)...
+[18:24:39] INFO: AFC is enabled with max remote calls: 10.
+[18:24:39] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:39] DEBUG: send_request_headers.complete
+[18:24:39] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:39] DEBUG: send_request_body.complete
+[18:24:39] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:39] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:39 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=542'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:39] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:39] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:39] DEBUG: receive_response_body.complete
+[18:24:39] DEBUG: response_closed.started
+[18:24:39] DEBUG: response_closed.complete
+[18:24:39] DEBUG: Analyzing Turn (ID: 20260111_182439)...
+[18:24:39] INFO: AFC is enabled with max remote calls: 10.
+[18:24:39] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:39] DEBUG: send_request_headers.complete
+[18:24:39] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:39] DEBUG: send_request_body.complete
+[18:24:39] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:40] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:40 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=567'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:40] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:40] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:40] DEBUG: receive_response_body.complete
+[18:24:40] DEBUG: response_closed.started
+[18:24:40] DEBUG: response_closed.complete
+[18:24:40] DEBUG: Analyzing Turn (ID: 20260111_182440)...
+[18:24:40] INFO: AFC is enabled with max remote calls: 10.
+[18:24:40] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:40] DEBUG: send_request_headers.complete
+[18:24:40] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:40] DEBUG: send_request_body.complete
+[18:24:40] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:41] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:41 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=672'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:41] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:41] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:41] DEBUG: receive_response_body.complete
+[18:24:41] DEBUG: response_closed.started
+[18:24:41] DEBUG: response_closed.complete
+[18:24:41] DEBUG: Analyzing Turn (ID: 20260111_182441)...
+[18:24:41] INFO: AFC is enabled with max remote calls: 10.
+[18:24:41] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:41] DEBUG: send_request_headers.complete
+[18:24:41] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:41] DEBUG: send_request_body.complete
+[18:24:41] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:41] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:41 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=576'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:41] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:41] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:41] DEBUG: receive_response_body.complete
+[18:24:41] DEBUG: response_closed.started
+[18:24:41] DEBUG: response_closed.complete
+[18:24:41] DEBUG: Analyzing Turn (ID: 20260111_182441)...
+[18:24:41] INFO: AFC is enabled with max remote calls: 10.
+[18:24:41] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:41] DEBUG: send_request_headers.complete
+[18:24:41] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:41] DEBUG: send_request_body.complete
+[18:24:41] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:42] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:42 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=561'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:42] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:42] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:42] DEBUG: receive_response_body.complete
+[18:24:42] DEBUG: response_closed.started
+[18:24:42] DEBUG: response_closed.complete
+[18:24:42] DEBUG: Analyzing Turn (ID: 20260111_182442)...
+[18:24:42] INFO: AFC is enabled with max remote calls: 10.
+[18:24:42] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:42] DEBUG: send_request_headers.complete
+[18:24:42] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:42] DEBUG: send_request_body.complete
+[18:24:42] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:43] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:42 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=603'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:43] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:43] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:43] DEBUG: receive_response_body.complete
+[18:24:43] DEBUG: response_closed.started
+[18:24:43] DEBUG: response_closed.complete
+[18:24:43] DEBUG: Analyzing Turn (ID: 20260111_182443)...
+[18:24:43] INFO: AFC is enabled with max remote calls: 10.
+[18:24:43] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:43] DEBUG: send_request_headers.complete
+[18:24:43] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:43] DEBUG: send_request_body.complete
+[18:24:43] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:43] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:43 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=547'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:43] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:43] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:43] DEBUG: receive_response_body.complete
+[18:24:43] DEBUG: response_closed.started
+[18:24:43] DEBUG: response_closed.complete
+[18:24:43] DEBUG: Analyzing Turn (ID: 20260111_182443)...
+[18:24:43] INFO: AFC is enabled with max remote calls: 10.
+[18:24:43] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:43] DEBUG: send_request_headers.complete
+[18:24:43] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:43] DEBUG: send_request_body.complete
+[18:24:43] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:44] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:44 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=633'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:44] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:44] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:44] DEBUG: receive_response_body.complete
+[18:24:44] DEBUG: response_closed.started
+[18:24:44] DEBUG: response_closed.complete
+[18:24:44] DEBUG: Analyzing Turn (ID: 20260111_182444)...
+[18:24:44] INFO: AFC is enabled with max remote calls: 10.
+[18:24:44] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:44] DEBUG: send_request_headers.complete
+[18:24:44] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:44] DEBUG: send_request_body.complete
+[18:24:44] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:44] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:44 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=570'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:44] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:44] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:44] DEBUG: receive_response_body.complete
+[18:24:44] DEBUG: response_closed.started
+[18:24:44] DEBUG: response_closed.complete
+[18:24:44] DEBUG: Analyzing Turn (ID: 20260111_182444)...
+[18:24:44] INFO: AFC is enabled with max remote calls: 10.
+[18:24:44] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:44] DEBUG: send_request_headers.complete
+[18:24:44] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:44] DEBUG: send_request_body.complete
+[18:24:44] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:45] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:45 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=506'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:45] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:45] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:45] DEBUG: receive_response_body.complete
+[18:24:45] DEBUG: response_closed.started
+[18:24:45] DEBUG: response_closed.complete
+[18:24:45] DEBUG: Analyzing Turn (ID: 20260111_182445)...
+[18:24:45] INFO: AFC is enabled with max remote calls: 10.
+[18:24:45] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:45] DEBUG: send_request_headers.complete
+[18:24:45] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:45] DEBUG: send_request_body.complete
+[18:24:45] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:46] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:45 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=655'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:46] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:46] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:46] DEBUG: receive_response_body.complete
+[18:24:46] DEBUG: response_closed.started
+[18:24:46] DEBUG: response_closed.complete
+[18:24:46] DEBUG: Analyzing Turn (ID: 20260111_182446)...
+[18:24:46] INFO: AFC is enabled with max remote calls: 10.
+[18:24:46] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:46] DEBUG: send_request_headers.complete
+[18:24:46] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:46] DEBUG: send_request_body.complete
+[18:24:46] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:46] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:46 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=545'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:46] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:46] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:46] DEBUG: receive_response_body.complete
+[18:24:46] DEBUG: response_closed.started
+[18:24:46] DEBUG: response_closed.complete
+[18:24:46] DEBUG: Analyzing Turn (ID: 20260111_182446)...
+[18:24:46] INFO: AFC is enabled with max remote calls: 10.
+[18:24:46] DEBUG: send_request_headers.started request=<Request [b'POST']>
+[18:24:46] DEBUG: send_request_headers.complete
+[18:24:46] DEBUG: send_request_body.started request=<Request [b'POST']>
+[18:24:46] DEBUG: send_request_body.complete
+[18:24:46] DEBUG: receive_response_headers.started request=<Request [b'POST']>
+[18:24:46] INFO: 
+\U0001f6d1 Stopped.
+[18:24:47] DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 11 Jan 2026 17:24:46 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=518'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+[18:24:47] INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+[18:24:47] DEBUG: receive_response_body.started request=<Request [b'POST']>
+[18:24:47] DEBUG: receive_response_body.complete
+[18:24:47] DEBUG: response_closed.started
+[18:24:47] DEBUG: response_closed.complete
+[18:24:47] DEBUG: close.started
+[18:24:47] DEBUG: close.complete
