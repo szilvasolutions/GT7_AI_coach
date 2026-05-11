@@ -117,6 +117,51 @@ class CornerTrace:
         return flips
 
     @property
+    def gear_at_apex(self) -> int:
+        """Gear at the packet with minimum speed (i.e. the corner's apex)."""
+        if not self.packets:
+            return 0
+        return min(self.packets, key=lambda p: p.speed_kmh).gear
+
+    @property
+    def rpm_at_apex(self) -> float:
+        if not self.packets:
+            return 0.0
+        return min(self.packets, key=lambda p: p.speed_kmh).rpm
+
+    @property
+    def peak_rpm(self) -> float:
+        return max((p.rpm for p in self.packets), default=0.0)
+
+    @property
+    def coasting_fraction(self) -> float:
+        """Share of frames where neither throttle nor brake is applied."""
+        if not self.packets:
+            return 0.0
+        coasting = sum(1 for p in self.packets if p.throttle < 5 and p.brake < 5)
+        return coasting / len(self.packets)
+
+    @property
+    def tire_temps_c(self) -> tuple[float, float, float, float]:
+        """Average tyre temps (FL, FR, RL, RR) across the trace, in Celsius."""
+        if not self.packets:
+            return (0.0, 0.0, 0.0, 0.0)
+        n = len(self.packets)
+        fl = sum(p.tyre_temp_fl for p in self.packets) / n
+        fr = sum(p.tyre_temp_fr for p in self.packets) / n
+        rl = sum(p.tyre_temp_rl for p in self.packets) / n
+        rr = sum(p.tyre_temp_rr for p in self.packets) / n
+        return (fl, fr, rl, rr)
+
+    @property
+    def lap_count(self) -> int:
+        return self.packets[-1].lap_count if self.packets else 0
+
+    @property
+    def last_lap_ms(self) -> int:
+        return self.packets[-1].lap_time_ms if self.packets else -1
+
+    @property
     def corner_type(self) -> str:
         """Coarse classification used in the LLM prompt for context.
 
