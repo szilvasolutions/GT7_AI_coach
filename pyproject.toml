@@ -35,12 +35,15 @@ openai = ["openai>=1.40"]
 gemini = ["google-genai>=0.3"]
 ollama = ["requests>=2.32"]
 voice = ["pyttsx3>=2.90"]
+piper = ["piper-tts>=1.2", "simpleaudio>=1.0"]
 all = [
     "anthropic>=0.39",
     "openai>=1.40",
     "google-genai>=0.3",
     "requests>=2.32",
     "pyttsx3>=2.90",
+    "piper-tts>=1.2",
+    "simpleaudio>=1.0",
 ]
 
 [project.urls]

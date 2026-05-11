@@ -24,8 +24,7 @@ def make_voice(name: str, **kwargs) -> VoiceEngine:
     Recognised names:
         ``null``      -> :class:`NullVoiceEngine` (records, no audio)
         ``pyttsx3``   -> :class:`PyttsxVoiceEngine` (offline, cross-platform)
-
-    The ``piper`` and ``system`` engines named in spec section 8 are Phase 4.
+        ``piper``     -> :class:`PiperVoiceEngine` (neural TTS, better quality)
     """
     key = (name or "").lower()
     if key in ("null", "none", ""):
@@ -35,5 +34,10 @@ def make_voice(name: str, **kwargs) -> VoiceEngine:
     if key == "pyttsx3":
         from gt7coach.voice.pyttsx3_engine import PyttsxVoiceEngine
 
-        return PyttsxVoiceEngine(**kwargs)
+        return PyttsxVoiceEngine(**{k: v for k, v in kwargs.items() if k == "rate"})
+    if key == "piper":
+        from gt7coach.voice.piper_engine import PiperVoiceEngine
+
+        accepted = {"model_path", "voice", "cli_binary"}
+        return PiperVoiceEngine(**{k: v for k, v in kwargs.items() if k in accepted})
     raise ValueError(f"unknown voice engine {name!r}")
