@@ -15,6 +15,7 @@ from gt7coach.detectors import (
     UndersteerConfig,
     WheelspinConfig,
     detect_late_brake,
+    detect_lockup,
     detect_understeer,
     detect_wheelspin,
 )
@@ -304,6 +305,69 @@ def test_understeer_quiet_when_axles_track_evenly() -> None:
         for i in range(30)
     ]
     assert detect_understeer(CornerTrace(packets=pkts)) == []
+
+
+# ---------- lockup -----------------------------------------------------------
+
+
+def test_lockup_fires_when_wheel_near_zero_at_speed() -> None:
+    pkts = []
+    for i in range(30):
+        pkts.append(
+            make_packet(
+                packet_id=i,
+                recv_time=i * 0.02,
+                speed_kmh=90,
+                brake=255,
+                wheel_rps=(0.5, 50.0, 50.0, 50.0),
+            )
+        )
+    events = detect_lockup(CornerTrace(packets=pkts))
+    assert len(events) == 1
+    assert events[0].type == "braking.lockup"
+    assert events[0].evidence["min_wheel_rps"] < 5.0
+
+
+def test_lockup_quiet_at_low_speed() -> None:
+    pkts = [
+        make_packet(
+            packet_id=i,
+            recv_time=i * 0.02,
+            speed_kmh=10,
+            brake=255,
+            wheel_rps=(0.0, 0.0, 0.0, 0.0),
+        )
+        for i in range(30)
+    ]
+    assert detect_lockup(CornerTrace(packets=pkts)) == []
+
+
+def test_lockup_quiet_without_brake() -> None:
+    pkts = [
+        make_packet(
+            packet_id=i,
+            recv_time=i * 0.02,
+            speed_kmh=90,
+            brake=0,
+            wheel_rps=(0.5, 50.0, 50.0, 50.0),
+        )
+        for i in range(30)
+    ]
+    assert detect_lockup(CornerTrace(packets=pkts)) == []
+
+
+def test_lockup_quiet_when_wheels_are_rolling() -> None:
+    pkts = [
+        make_packet(
+            packet_id=i,
+            recv_time=i * 0.02,
+            speed_kmh=90,
+            brake=255,
+            wheel_rps=(75.0, 75.0, 75.0, 75.0),
+        )
+        for i in range(30)
+    ]
+    assert detect_lockup(CornerTrace(packets=pkts)) == []
 
 
 # ---------- end-to-end: bad-corner trace through segmenter + detectors -------

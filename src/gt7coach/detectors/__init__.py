@@ -7,7 +7,12 @@ physics.
 """
 
 from gt7coach.detectors.base import Event
-from gt7coach.detectors.braking import LateBrakeConfig, detect_late_brake
+from gt7coach.detectors.braking import (
+    LateBrakeConfig,
+    LockupConfig,
+    detect_late_brake,
+    detect_lockup,
+)
 from gt7coach.detectors.corner import CornerSegmenter, CornerSegmenterConfig, CornerTrace
 from gt7coach.detectors.steering import UndersteerConfig, detect_understeer
 from gt7coach.detectors.throttle import WheelspinConfig, detect_wheelspin
@@ -18,9 +23,11 @@ __all__ = [
     "CornerTrace",
     "Event",
     "LateBrakeConfig",
+    "LockupConfig",
     "UndersteerConfig",
     "WheelspinConfig",
     "detect_late_brake",
+    "detect_lockup",
     "detect_understeer",
     "detect_wheelspin",
 ]

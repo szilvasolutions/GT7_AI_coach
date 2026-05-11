@@ -35,6 +35,7 @@ from gt7coach.detectors import (
     CornerTrace,
     Event,
     detect_late_brake,
+    detect_lockup,
     detect_understeer,
     detect_wheelspin,
 )
@@ -88,6 +89,7 @@ def _stream_replay(args: argparse.Namespace) -> tuple[Iterator[Packet], None]:
 def _run_detectors(trace: CornerTrace) -> list[Event]:
     events: list[Event] = []
     events += detect_late_brake(trace)
+    events += detect_lockup(trace)
     events += detect_wheelspin(trace)
     events += detect_understeer(trace)
     return events

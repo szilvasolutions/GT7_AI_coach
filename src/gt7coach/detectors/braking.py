@@ -1,7 +1,6 @@
 """Braking detectors.
 
-Currently ships only ``late_brake``. Spec section 6 lists ``lockup`` and
-``trail_off_too_fast`` as future work (Phase 4).
+Ships ``late_brake`` and ``lockup``. ``trail_off_too_fast`` remains Phase 4.
 """
 
 from __future__ import annotations
@@ -74,3 +73,77 @@ def detect_late_brake(trace: CornerTrace, *, config: LateBrakeConfig | None = No
             },
         )
     ]
+
+
+@dataclass(slots=True)
+class LockupConfig:
+    """Tunable thresholds for the lockup detector.
+
+    Per spec section 6: "wheel speed -> 0 while car speed > 30 km/h".
+    """
+
+    min_brake: int = 150  # only count frames where the driver is actually braking
+    min_speed_kmh: float = 30.0  # below this, locking is normal (you're stopping)
+    max_wheel_rps: float = 10.0  # absolute rad/s; the slowest wheel is "near zero"
+    min_duration_s: float = 0.10  # avoid one-frame noise
+    full_severity_duration_s: float = 0.50
+
+
+def detect_lockup(trace: CornerTrace, *, config: LockupConfig | None = None) -> list[Event]:
+    """At least one wheel rotates near zero while the car is still moving fast.
+
+    Catches "stomp on the brakes and skate" lockups. The detector looks at the
+    *slowest* wheel each frame so a single front-axle lock counts (which is
+    typically what happens — front wheels see more weight transfer and lock
+    first). Multiple events per corner are possible if the lockup is
+    intermittent (ABS-style pulsing).
+    """
+    cfg = config or LockupConfig()
+    events: list[Event] = []
+    streak: list[tuple[int, float, float]] = []  # (index, slowest_rps, speed_kmh)
+
+    def close_streak() -> None:
+        nonlocal streak
+        if not streak:
+            return
+        first_idx = streak[0][0]
+        last_idx = streak[-1][0]
+        duration = trace.packets[last_idx].recv_time - trace.packets[first_idx].recv_time
+        if duration < cfg.min_duration_s:
+            streak = []
+            return
+        peak_speed = max(s for _, _, s in streak)
+        min_rps = min(r for _, r, _ in streak)
+        span = max(cfg.full_severity_duration_s - cfg.min_duration_s, 1e-6)
+        severity = min(1.0, (duration - cfg.min_duration_s) / span)
+        events.append(
+            Event(
+                type="braking.lockup",
+                severity=severity,
+                t_offset=trace.packets[first_idx].recv_time - trace.start_time,
+                evidence={
+                    "duration_s": round(duration, 3),
+                    "min_wheel_rps": round(min_rps, 2),
+                    "peak_speed_kmh": round(peak_speed, 1),
+                },
+            )
+        )
+        streak = []
+
+    for i, p in enumerate(trace.packets):
+        if p.brake < cfg.min_brake or p.speed_kmh < cfg.min_speed_kmh:
+            close_streak()
+            continue
+        slowest = min(
+            abs(p.wheel_speed_fl),
+            abs(p.wheel_speed_fr),
+            abs(p.wheel_speed_rl),
+            abs(p.wheel_speed_rr),
+        )
+        if slowest < cfg.max_wheel_rps:
+            streak.append((i, slowest, p.speed_kmh))
+        else:
+            close_streak()
+
+    close_streak()
+    return events
