@@ -62,6 +62,32 @@ ruff check
 The test suite runs without any PS5. Phase 1 verifies Salsa20 decrypt, packet
 parsing against the canonical kaitai struct, and CSV replay.
 
+## Capture a live session (no coaching, no voice — telemetry only)
+
+`gt7coach-capture` records a real PS5 session to disk so the data can be
+replayed and analysed offline. Useful for sanity-checking the receiver on
+your LAN and for resolving the open questions in
+[PHASE_1_NOTES.md](./PHASE_1_NOTES.md).
+
+```bash
+# 1. Start GT7 on the PS5 and enter a race / time trial.
+# 2. On your PC, on the same LAN:
+gt7coach-capture                           # auto-discover PS5, format B
+gt7coach-capture --ip 192.168.1.120        # explicit PS5 IP (if broadcast is blocked)
+gt7coach-capture --duration 60             # auto-stop after 60 seconds
+gt7coach-capture --out ./mycaps --format A # legacy 296-byte format
+```
+
+Hit Ctrl-C to stop. Each capture produces three files in `./sessions/`:
+
+* `capture_<timestamp>.bin`  — raw decrypted packets, for offline byte-level analysis
+* `capture_<timestamp>.csv`  — same schema as the replay loader, parses with `replay_csv()`
+* `capture_<timestamp>.json` — metadata: format, host, packet-size histogram, packet rate
+
+The live status line shows speed, gear, RPM, pedal positions, steering angle
+and lateral / longitudinal g so you can confirm the data is alive before
+walking away.
+
 ## Credits
 
 This project would be impossible without the reverse-engineering work of:
