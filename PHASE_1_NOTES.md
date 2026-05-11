@@ -46,38 +46,66 @@ are Phase 2/3 territory and intentionally left for later.
 
 ## Deviations from ARCHITECTURE.md
 
-These are flagged so we can either update the spec or revise the code:
+A first live capture (`capture_20260511_150824`, 2049 frames over 34.17s,
+60.0 pps, zero packet loss across IDs 24947→26995) resolved the three open
+questions. Details follow each item.
 
-1. **Default heartbeat is `B` (316-byte packets), not `A` (296-byte).**
-   The spec section 5 says "296-byte packets" but also requires
-   `steer_angle`, `accel_long`, and `accel_lat`. Those fields only exist in
-   the addendum-1 (`B`) format and later; the A format (`A`) lacks them.
-   Defaulting to `B` is the only way to satisfy section 5's field list and
-   the section 11 bug list at the same time. Configurable via
-   `network.packet_format` in `config.yaml`. **Suggest updating the spec to
-   say "316-byte packets via heartbeat `B`" or to mark steer/accel as
-   "best-effort, optional in A format."**
+1. **Default heartbeat is `B` (316-byte packets), not `A` (296-byte). — RESOLVED.**
+   The live capture confirmed the PS5 responds to `B` with 316-byte packets
+   (100% of 2049 frames). Spec section 5 says "296-byte" but also lists
+   steer/accel as required, which only exist in B+. `B` is the correct
+   default. **Update spec section 5 to specify "316-byte packets via heartbeat
+   byte `B`"**; `A` remains selectable via `network.packet_format` for users
+   who want the legacy payload.
 
-2. **`accel_long` / `accel_lat` units.** The kaitai struct from
-   `zetetos/gt-telemetry` documents these (the `translational_envelope`'s
-   `surge` and `sway`) as "Body forces along axes (-1 to 1)" — i.e. they
-   are *normalized* body-force values, not values in m/s². Section 5 of the
-   spec labels them "m/s²". We read the raw float verbatim; the *unit
-   interpretation* is incorrect in the spec. **Suggest updating section 5 to
-   `accel_long`, `accel_lat` (float, normalized -1..+1 body force)** and
-   either accept that for Phase 2 detectors or derive true m/s² values by
-   differencing the velocity vector at offsets `0x10` / `0x14` / `0x18`.
+2. **`accel_long` / `accel_lat` units — RESOLVED, kaitai docs are wrong.**
+   The `zetetos/gt-telemetry` kaitai struct labels these "body forces (-1..1)".
+   Live capture proves they are actually **m/s²**, matching the spec:
+   - Frame 500, full throttle in 4th gear at 209 km/h: `accel_long = +6.05`
+     (≈0.6 g forward — physically correct for a sports car at full throttle).
+   - Frame 1 (94 km/h, hard left, yaw_rate -0.527 rad/s):
+     `accel_lat = +13.65` ≈ `speed × yaw_rate = 26.22 × 0.527 = 13.82` m/s²
+     (≈1.4 g — matches circular-motion calculation to 1%).
+   Spec section 5 (m/s²) wins; no code change required. **Suggest leaving a
+   note in section 5 explicitly contradicting the kaitai labelling so future
+   readers don't get confused.**
 
-3. **`lap_time_ms` source.** The spec says simply "`lap_time_ms`". The packet
-   has `best_laptime` at `0x78`, `last_laptime` at `0x7C`, and (only in C
-   format) `current_laptime`. We picked `last_laptime` — the most useful
-   single value for post-corner analysis. **Suggest the spec name this
-   explicitly so we don't drift later.**
+3. **`lap_time_ms` = `last_laptime` (0x7C) — RESOLVED.** The capture crosses
+   one lap boundary (frames 573→574). Behaviour observed:
+   - During lap 1: `lap_count=1`, `lap_time_ms=-1` (no previous lap yet).
+   - At line crossing: `lap_count=2`, `lap_time_ms=63246` (= 1:03.246, the
+     just-completed lap 1).
+   This is exactly what we want for post-corner analysis. **Update spec
+   section 5 to say `lap_time_ms` is the most-recent completed lap (-1 if
+   none).** `current_laptime` (C-format only) would be needed for
+   in-lap-progress UI — out of scope for v1.
 
 4. **`packet_id` is read from `0x70` (sequence_id), not `0x00`.** The legacy
    V62 reads `0x00`, which is actually the GT7 magic header (always
    `0x47375330`). V62's packet IDs are therefore all identical — a real bug.
    `0x70` is the kaitai-defined per-frame sequence counter.
+
+## Findings from the first live capture
+
+Worth recording so we don't re-derive them later:
+
+* **Tick rate is 60 Hz on the wire** (59.96 pps measured over 34 s) but the
+  underlying physics tick may be coarser: in the first ~3 s of the capture
+  several consecutive packets with incrementing `packet_id` had byte-identical
+  payloads. This was the pre-race / countdown phase. Detectors should treat
+  duplicate consecutive payloads as a single physics step (track by
+  `packet_id` or by `recv_time` delta, not by content hash).
+* **Wheel speeds are signed and negative for forward motion.** At 209 km/h
+  (58 m/s) all four wheels read ≈-170 rad/s; with a 0.33 m tyre radius this
+  is +56 m/s in magnitude — matches `speed_mps`. The legacy V62 used
+  `abs()` for this reason; Phase 2 detectors should do the same (or compare
+  signed values consistently). The sign convention is consistent across all
+  four wheels.
+* **Lockup detection is feasible from this packet alone.** Frame 810
+  (heavy-brake zone, brake=255, car at 261 km/h ≈ 72.5 m/s, wheels at
+  ≈195 rad/s ≈ 64.3 m/s effective) shows ~11 % slip on the front axle —
+  the moment the driver locked up. Good news for Phase 2's `braking.lockup`
+  detector.
 
 ## Reference-source disagreements I had to resolve
 
