@@ -62,6 +62,47 @@ ruff check
 The test suite runs without any PS5. Phase 1 verifies Salsa20 decrypt, packet
 parsing against the canonical kaitai struct, and CSV replay.
 
+## Run the coach (Phase 3)
+
+`gt7coach-coach` runs the full pipeline: telemetry source → corner segmenter
+→ detectors → LLM advisor → voice. It works both against a live PS5 and
+against a recorded CSV (no PS5 needed for the second).
+
+Install the extras for whichever provider + voice you want:
+
+```bash
+pip install -e ".[dev,gemini,voice]"     # Gemini + pyttsx3
+pip install -e ".[dev,anthropic,voice]"  # Anthropic + pyttsx3
+pip install -e ".[dev,ollama]"           # local Ollama, no voice
+```
+
+Put your API key in `.env`:
+
+```bash
+cp .env.example .env
+# edit .env: ANTHROPIC_API_KEY=...  (or GEMINI_API_KEY=...  or OPENAI_API_KEY=...)
+```
+
+Run against a recorded CSV (no PS5 needed):
+
+```bash
+gt7coach-coach --source ./sessions/capture_<ts>.csv \
+               --provider mock --voice null      # dry run
+gt7coach-coach --source ./sessions/capture_<ts>.csv \
+               --provider gemini --voice pyttsx3 # real LLM + speech
+```
+
+Run live against the PS5 while playing:
+
+```bash
+gt7coach-coach --provider gemini --driver-style smooth
+gt7coach-coach --ip 192.168.1.120 --provider anthropic
+```
+
+Useful flags: `--cooldown <seconds>` (rate limit), `--driver-style` (smooth /
+aggressive / learning), `--model <name>` (override default per provider),
+`--voice null` (log advice instead of speaking it). `--help` for all of them.
+
 ## Capture a live session (no coaching, no voice — telemetry only)
 
 `gt7coach-capture` records a real PS5 session to disk so the data can be
