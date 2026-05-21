@@ -426,8 +426,18 @@ def main(argv: list[str] | None = None) -> int:
         except Exception:  # pragma: no cover — non-fatal
             pass
 
+    # Shutdown coordination so Ctrl+C is responsive even when the post-session
+    # summary call is blocking on a slow LLM. First Ctrl+C: cleanly stop the
+    # receiver and let the finally block drain the voice. Second Ctrl+C:
+    # immediately exit the process — don't wait for the summary HTTP call.
+    shutdown_state = {"count": 0}
+
     def _shutdown(_signum: int, _frame: FrameType | None) -> None:
-        log.info("shutdown signal — draining")
+        shutdown_state["count"] += 1
+        log.info("shutdown signal — draining (#%d)", shutdown_state["count"])
+        if shutdown_state["count"] >= 2:
+            log.warning("second Ctrl+C — exiting now without post-session summary")
+            os._exit(130)
         if rx is not None:
             rx.stop()
         # Do NOT stop the voice here. The finally block runs
@@ -524,7 +534,11 @@ def main(argv: list[str] | None = None) -> int:
             session.close()
 
     want_summary = args.summary or (cfg.session.generate_summary and not args.no_summary)
-    if want_summary and session is not None:
+    if shutdown_state["count"] > 0:
+        # User asked to quit — skip the LLM summary call entirely, so Ctrl+C
+        # returns the prompt promptly instead of blocking on a Gemini retry.
+        log.info("skipping post-session summary (shutdown requested)")
+    elif want_summary and session is not None:
         try:
             summary = summarise(
                 session.dir, provider=provider, driver_style=advisor_cfg.driver_style

@@ -136,14 +136,13 @@ class GeminiProvider:
 
     Four non-obvious things we configure:
 
-    * **Default model is ``gemini-2.5-flash``.** Earlier versions defaulted to
-      ``flash-lite`` thinking it had a higher daily cap, but a real race
-      session blew through the free-tier 20-RPD quota on flash-lite and
-      degraded to canned-fallback advice for the rest of the day. Plain
-      ``gemini-2.5-flash`` has a separate (higher) free-tier daily bucket
-      and similar latency / quality for our 4-12 word imperatives.
-      Override with ``--model gemini-2.5-flash-lite`` if you specifically
-      want the cheaper / lighter variant.
+    * **Default model is ``gemini-2.5-flash-lite``.** Both ``flash`` and
+      ``flash-lite`` share the same free-tier limit of 20 requests/day, so
+      switching to plain ``flash`` doesn't help when you've already burned
+      the day's quota — it just adds latency. ``flash-lite`` is meaningfully
+      faster at the prompt sizes we send and is what the legacy V23 script
+      used. When you blow through quota, the advisor falls back to canned
+      phrases (see ``_FALLBACK_PHRASES`` in advisor.py).
     * **Permissive safety thresholds.** The racing-coach corpus is benign and
       the default filter occasionally blocks helpful answers on racing verbs
       like "attack" / "punish".
@@ -157,7 +156,7 @@ class GeminiProvider:
       to the canned-phrase fallback in the advisor.
     """
 
-    DEFAULT_MODEL = "gemini-2.5-flash"
+    DEFAULT_MODEL = "gemini-2.5-flash-lite"
     _RETRY_STATUS_CODES = (429, 500, 502, 503, 504)
     _RETRY_DELAY_S = 1.0
 

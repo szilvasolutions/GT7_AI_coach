@@ -194,9 +194,9 @@ def test_advisor_falls_back_to_canned_phrase_on_provider_error() -> None:
     trace, _ = next(iter(_build_traces_and_events()))
     evt = Event(type="braking.late_brake", severity=0.5, t_offset=0.0)
     res = advisor.on_corner(trace, [evt], now=0.0)
-    assert res.advice == "Brake earlier."  # canned fallback for braking.late_brake
+    assert res.advice == "Brake earlier into that turn next lap."
     assert res.suppressed_reason is not None and "provider-error" in res.suppressed_reason
-    assert voice.spoken == ["Brake earlier."]
+    assert voice.spoken == ["Brake earlier into that turn next lap."]
 
 
 def test_advisor_no_op_when_event_type_has_no_fallback() -> None:

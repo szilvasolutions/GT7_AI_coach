@@ -57,17 +57,21 @@ ResultCallback = Callable[[int, "CornerTrace | None", "AdvisorResult | IncidentR
 
 
 _FALLBACK_PHRASES: dict[str, str] = {
-    "braking.late_brake": "Brake earlier.",
-    "braking.lockup": "Lockup. Trail off the brakes.",
-    "braking.trail_off_too_fast": "Release the brake more gradually.",
-    "throttle.wheelspin": "Less throttle on exit.",
-    "throttle.sawing": "Smooth the throttle.",
-    "throttle.early_lift": "Stay on the throttle through the corner.",
-    "steering.understeer": "Less steering, more patience.",
-    "steering.oversteer": "Counter and ease off.",
-    "line.late_apex": "Hit the apex sooner.",
-    # Positive-feedback fallbacks. Multiple per type so a string of clean
-    # corners doesn't sound robotic.
+    # Coaching advice is for the NEXT lap's version of the corner that just
+    # finished, not the corner the driver is physically in right now. The
+    # voice delay (LLM + TTS) puts most utterances 2-3 s after corner exit,
+    # so phrasing must make it unambiguous we're talking about *that turn*
+    # not the upcoming braking zone.
+    "braking.late_brake": "Brake earlier into that turn next lap.",
+    "braking.lockup": "Lockup that lap. Trail off the brake sooner.",
+    "braking.trail_off_too_fast": "Release the brake more gradually next time.",
+    "throttle.wheelspin": "Less throttle on exit next lap.",
+    "throttle.sawing": "Smooth the throttle next time through.",
+    "throttle.early_lift": "Carry throttle deeper through that turn.",
+    "steering.understeer": "Less steering, more patience next lap.",
+    "steering.oversteer": "Easier on the throttle next time.",
+    "line.late_apex": "Hit the apex sooner next lap.",
+    # Positive-feedback fallback.
     "quality.clean_corner": "Tidy through that one.",
 }
 

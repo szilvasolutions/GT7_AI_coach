@@ -301,7 +301,7 @@ def test_advisor_falls_back_when_provider_returns_one_word() -> None:
     trace = _trace(pkts)
     evt = Event(type="line.late_apex", severity=0.5, t_offset=0.0)
     res = advisor.on_corner(trace, [evt], now=0.0)
-    assert res.advice == "Hit the apex sooner."  # canned phrase for line.late_apex
+    assert res.advice == "Hit the apex sooner next lap."  # canned phrase for line.late_apex
     assert res.suppressed_reason is not None and "too-short-response" in res.suppressed_reason
 
 
