@@ -28,7 +28,7 @@ class PyttsxVoiceEngine:
     third utterance is queued, the first one is stale advice anyway.
     """
 
-    def __init__(self, *, rate: int = 230) -> None:
+    def __init__(self, *, rate: int = 200) -> None:
         try:
             import pyttsx3  # noqa: F401  (presence check; real import in worker)
         except ImportError as exc:

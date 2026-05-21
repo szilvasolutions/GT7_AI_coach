@@ -230,7 +230,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="pyttsx3",
         help='Voice engine: "pyttsx3" or "null" (no audio, log only)',
     )
-    p.add_argument("--voice-rate", type=int, default=230)
+    p.add_argument(
+        "--voice-rate",
+        type=int,
+        default=200,
+        help="TTS rate in words/minute (default 200). Default lowered from 230 "
+        "after operator feedback that 230 felt rushed in cockpit audio.",
+    )
 
     # Session logging.
     p.add_argument(
