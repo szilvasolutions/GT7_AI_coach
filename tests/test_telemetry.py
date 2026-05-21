@@ -145,6 +145,58 @@ def test_packet_a_format_optional_fields_are_none() -> None:
     assert pkt.accel_lat is None
 
 
+def test_receiver_start_sends_initial_heartbeat() -> None:
+    """Mirror legacy V23 line 690: as soon as Receiver.start() binds the
+    socket, send one heartbeat from it so the PS5 immediately learns the
+    address to stream telemetry back to. Regression-guards the gap where the
+    PS5 disconnected after ~15 s because no heartbeat had been sent between
+    bind and the first recvfrom-timeout."""
+    from unittest.mock import patch
+
+    from gt7coach.telemetry.receiver import Receiver, ReceiverConfig
+
+    sendto_calls: list[tuple[bytes, tuple[str, int]]] = []
+
+    class _FakeSocket:
+        def setsockopt(self, *a, **kw):
+            pass
+
+        def bind(self, addr):
+            pass
+
+        def settimeout(self, t):
+            pass
+
+        def sendto(self, payload, addr):
+            sendto_calls.append((payload, addr))
+
+        def close(self):
+            pass
+
+        # _local_ipv4() opens its own throwaway socket and calls connect/getsockname.
+        def connect(self, addr):
+            pass
+
+        def getsockname(self):
+            return ("10.0.0.5", 0)
+
+    with patch(
+        "gt7coach.telemetry.receiver.socket.socket", side_effect=lambda *a, **k: _FakeSocket()
+    ):
+        rx = Receiver(ReceiverConfig(ps5_ip="10.0.0.99"))
+        try:
+            rx.start()
+        finally:
+            rx.stop()
+
+    # The initial in-line heartbeat must hit (10.0.0.99, 33739) — no other
+    # heartbeats happen because no recvfrom timeout is exercised here.
+    assert sendto_calls, "expected at least one sendto (the initial heartbeat)"
+    payload, addr = sendto_calls[0]
+    assert addr == ("10.0.0.99", 33739)
+    assert payload == b"B"  # default packet_format
+
+
 def test_replay_from_fixture() -> None:
     """Replay the canonical fixture CSV and count packets."""
     assert SYNTHETIC_CSV.exists(), f"missing fixture: {SYNTHETIC_CSV}"

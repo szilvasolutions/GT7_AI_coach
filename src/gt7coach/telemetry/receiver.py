@@ -1,17 +1,26 @@
 """UDP receiver for GT7 telemetry.
 
 Responsibilities:
-    * Bind a UDP socket on the local receive port.
-    * Send a periodic heartbeat byte to the PS5 so it keeps streaming.
+    * Bind a UDP socket on the local receive port (local IP first, falls back
+      to 0.0.0.0).
     * Discover the PS5's IP by broadcast on first contact; allow an explicit
       override via config; fall back to a subnet scan if broadcast fails.
+    * Drive a single-threaded send + receive loop. Heartbeats fire from the
+      same socket as recvfrom, on three triggers: once at bind, every
+      ``_HEARTBEAT_EVERY_N_PACKETS`` (~1.7s at 60Hz), and on every
+      ``recvfrom`` timeout (1s default).
     * Decrypt + parse incoming packets and hand :class:`Packet` objects to a
       caller-supplied callback (or generator).
+    * Run a pure-diagnostic stats sampler thread that logs packet rate every
+      5 s and raises a 16s-disconnect alarm to make protocol-level dropouts
+      obvious in debug.log.
 
 References:
     * zetetos/gt-telemetry, internal/reader/udpreader.go (heartbeat semantics)
-    * snipem/gt7dashboard, gt7dashboard/gt7communication.py (10s heartbeat cadence,
+    * snipem/gt7dashboard, gt7dashboard/gt7communication.py (heartbeat cadence,
       16s game-side timeout)
+    * legacy/gt_coach_AI_V23_goodbuttoomuchthrottlefocus.py lines 683-793 —
+      this module mirrors that script's single-socket / single-thread design.
 """
 
 from __future__ import annotations
@@ -130,11 +139,16 @@ def _subnet_scan(cfg: ReceiverConfig) -> str | None:
         sock.close()
 
 
+_HEARTBEAT_EVERY_N_PACKETS = 100  # ≈1.7s at 60 Hz; matches legacy V23
+
+
 class Receiver:
     """Synchronous-friendly UDP receiver.
 
-    Use as a context manager, or call :meth:`packets` to iterate. Heartbeats
-    run on a background thread; the iterator runs on the calling thread.
+    Single-threaded send + receive on one socket: heartbeats fire from the
+    main receive loop (every ~100 decoded packets AND on every recvfrom
+    timeout), exactly matching the legacy V23 reference script. The only
+    background thread is a pure-diagnostic stats sampler.
     """
 
     def __init__(self, cfg: ReceiverConfig | None = None) -> None:
@@ -142,7 +156,6 @@ class Receiver:
         self._sock: socket.socket | None = None
         self._target_ip: str | None = None
         self._stop = threading.Event()
-        self._heartbeat_thread: threading.Thread | None = None
         self._stats_thread: threading.Thread | None = None
         self._packets_decoded = 0
         self._packets_short = 0
@@ -151,6 +164,7 @@ class Receiver:
         self._heartbeats_sent = 0
         self._heartbeats_failed = 0
         self._last_packet_at: float | None = None
+        self._disconnect_alarm_fired = False
 
     # ---- lifecycle ----------------------------------------------------------
 
@@ -173,35 +187,76 @@ class Receiver:
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind(("0.0.0.0", self.cfg.port_rx))
+        # Legacy V23 (lines 686-687) tries the local IP first and falls back
+        # to 0.0.0.0. On multi-NIC Windows laptops this pins egress + ingress
+        # to the same interface so the PS5 sees a consistent source IP.
+        bound_addr = self._bind_with_local_ip_preference(sock)
         sock.settimeout(1.0)
         self._sock = sock
 
+        # Initial heartbeat from the bound socket — legacy V23 line 690.
+        # Closes the timing gap between bind and the receive loop's first
+        # heartbeat-on-timeout, so the PS5 immediately learns where to send.
+        self._send_heartbeat(reason="initial")
+
         self._stop.clear()
-        self._heartbeat_thread = threading.Thread(
-            target=self._heartbeat_loop, name="gt7-heartbeat", daemon=True
-        )
-        self._heartbeat_thread.start()
         self._stats_thread = threading.Thread(
             target=self._stats_loop, name="gt7-rx-stats", daemon=True
         )
         self._stats_thread.start()
         log.info(
-            "receiver started on port %d, heartbeat -> %s:%d (format %r)",
-            self.cfg.port_rx,
+            "receiver started: bound=%s, heartbeat -> %s:%d (format %r, every %d pkts + on timeout)",
+            bound_addr,
             self._target_ip,
             self.cfg.port_tx,
             self.cfg.packet_format,
+            _HEARTBEAT_EVERY_N_PACKETS,
         )
+
+    def _bind_with_local_ip_preference(self, sock: socket.socket) -> str:
+        """Try local-IP bind first, fall back to 0.0.0.0. Returns the address
+        actually bound, for logging.
+        """
+        local = _local_ipv4()
+        if local != "127.0.0.1":
+            try:
+                sock.bind((local, self.cfg.port_rx))
+                return f"{local}:{self.cfg.port_rx}"
+            except OSError as exc:
+                log.debug(
+                    "local-IP bind %s:%d failed (%s); using 0.0.0.0", local, self.cfg.port_rx, exc
+                )
+        sock.bind(("0.0.0.0", self.cfg.port_rx))
+        return f"0.0.0.0:{self.cfg.port_rx}"
+
+    def _send_heartbeat(self, *, reason: str) -> None:
+        """Send one heartbeat from the bound socket; bump counters; log at DEBUG."""
+        sock = self._sock
+        if sock is None or self._target_ip is None:
+            return
+        try:
+            sock.sendto(
+                self.cfg.packet_format.encode("ascii"),
+                (self._target_ip, self.cfg.port_tx),
+            )
+            self._heartbeats_sent += 1
+            log.debug(
+                "heartbeat #%d (%s) -> %s:%d",
+                self._heartbeats_sent,
+                reason,
+                self._target_ip,
+                self.cfg.port_tx,
+            )
+        except OSError as exc:
+            self._heartbeats_failed += 1
+            if not self._stop.is_set():
+                log.warning("heartbeat (%s) failed: %s", reason, exc)
 
     def stop(self) -> None:
         self._stop.set()
         if self._sock is not None:
             self._sock.close()
             self._sock = None
-        if self._heartbeat_thread is not None:
-            self._heartbeat_thread.join(timeout=2.0)
-            self._heartbeat_thread = None
         if self._stats_thread is not None:
             self._stats_thread.join(timeout=2.0)
             self._stats_thread = None
@@ -225,6 +280,12 @@ class Receiver:
     def frames(self) -> Iterator[tuple[bytes, Packet]]:
         """Yield ``(decrypted_bytes, Packet)`` pairs until :meth:`stop` is called.
 
+        Single-threaded send + receive on one socket — heartbeats fire from
+        this loop, not a side thread. Two trigger points (legacy V23 parity):
+
+        * Every ``_HEARTBEAT_EVERY_N_PACKETS`` decoded packets (~1.7s at 60Hz)
+        * On every ``recvfrom`` timeout (1s default)
+
         Useful for capture tooling that wants to persist the raw decrypted
         payload alongside the parsed view (so unknown offsets can be analysed
         later without another live session).
@@ -238,29 +299,11 @@ class Receiver:
                 data, _addr = self._sock.recvfrom(4096)
             except TimeoutError:
                 # GT7 disconnects after 16s of silence. Whenever recvfrom
-                # times out (default 1s), re-prod the PS5 from this socket so
-                # it remembers where to send telemetry. The legacy reference
-                # script does exactly this — its receive loop never goes more
-                # than ~1s without a heartbeat in flight, which kept GT7 awake
-                # through transient packet drops and pause/resume cycles.
+                # times out (1s default), re-prod the PS5 from this socket so
+                # it remembers where to send telemetry. Mirrors legacy V23
+                # line 793.
                 self._recv_timeouts += 1
-                if self._target_ip is not None:
-                    try:
-                        self._sock.sendto(
-                            self.cfg.packet_format.encode("ascii"),
-                            (self._target_ip, self.cfg.port_tx),
-                        )
-                        self._heartbeats_sent += 1
-                        log.debug(
-                            "recvfrom timeout #%d -> re-prod heartbeat sent to %s:%d",
-                            self._recv_timeouts,
-                            self._target_ip,
-                            self.cfg.port_tx,
-                        )
-                    except OSError as exc:
-                        self._heartbeats_failed += 1
-                        if not self._stop.is_set():
-                            log.warning("re-prod heartbeat failed: %s", exc)
+                self._send_heartbeat(reason="timeout")
                 continue
             except OSError:
                 if self._stop.is_set():
@@ -279,52 +322,16 @@ class Receiver:
                 continue
             self._packets_decoded += 1
             self._last_packet_at = monotonic()
+            self._disconnect_alarm_fired = False  # PS5 is alive again
+            # Periodic in-loop heartbeat — legacy V23 line 700.
+            if self._packets_decoded % _HEARTBEAT_EVERY_N_PACKETS == 0:
+                self._send_heartbeat(reason="periodic")
             yield decrypted, pkt
 
     def run(self, on_packet: Callable[[Packet], None]) -> None:
         """Drive the receive loop, invoking ``on_packet`` for each frame."""
         for pkt in self.packets():
             on_packet(pkt)
-
-    # ---- heartbeat ----------------------------------------------------------
-
-    def _heartbeat_loop(self) -> None:
-        """Send periodic heartbeats from the bound receive socket.
-
-        GT7's protocol: the PS5 sends telemetry back to the source port of the
-        most recent heartbeat it received. If we use a fresh unbound socket
-        here, the OS picks a random source port and the PS5 switches its
-        telemetry target away from port_rx (33740) — so the receive loop goes
-        deaf within seconds, even though the heartbeat thread is still firing.
-
-        Reference implementations (gt7dashboard, gt-telemetry) all send
-        heartbeats from the receive socket for exactly this reason.
-        """
-        assert self._target_ip is not None
-        heartbeat = self.cfg.packet_format.encode("ascii")
-        idx = 0
-        while not self._stop.is_set():
-            sock = self._sock
-            if sock is None:
-                break
-            idx += 1
-            try:
-                sock.sendto(heartbeat, (self._target_ip, self.cfg.port_tx))
-                self._heartbeats_sent += 1
-                log.debug(
-                    "heartbeat #%d sent -> %s:%d from port_rx=%d",
-                    idx,
-                    self._target_ip,
-                    self.cfg.port_tx,
-                    self.cfg.port_rx,
-                )
-            except OSError as exc:
-                self._heartbeats_failed += 1
-                # Socket closed during shutdown is expected; anything else is real.
-                if not self._stop.is_set():
-                    log.warning("heartbeat #%d send failed: %s", idx, exc)
-            if self._stop.wait(self.cfg.heartbeat_seconds):
-                break
 
     def _stats_loop(self) -> None:
         """Log packet-rate stats every 5 seconds so a session log shows when
@@ -351,14 +358,23 @@ class Receiver:
                 last_pkt_str = (
                     f"{since_last_pkt:.1f}s ago" if since_last_pkt is not None else "never"
                 )
+                silent_for = silent_intervals * interval
                 log.warning(
                     "rx stats: 0 packets in last %.0fs (timeouts=%d, hb_sent=%d, last_pkt=%s, silent_for=%.0fs)",
                     interval,
                     delta_timeouts,
                     self._heartbeats_sent,
                     last_pkt_str,
-                    silent_intervals * interval,
+                    silent_for,
                 )
+                if silent_for >= 16.0 and not self._disconnect_alarm_fired:
+                    self._disconnect_alarm_fired = True
+                    log.error(
+                        "GT7 disconnect timer (16s) tripped — PS5 has stopped streaming. "
+                        "Pause/resume the race on the PS5 to restart telemetry, or restart "
+                        "gt7coach-coach. Heartbeats are still firing (%d sent).",
+                        self._heartbeats_sent,
+                    )
             else:
                 silent_intervals = 0
                 log.info(
