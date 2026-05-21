@@ -30,7 +30,12 @@ log = logging.getLogger(__name__)
 
 DEFAULT_PORT_RX = 33740  # local listen
 DEFAULT_PORT_TX = 33739  # PS5 heartbeat target
-DEFAULT_HEARTBEAT_SECONDS = 10.0  # game disconnects at 16s silence
+# Game disconnects at 16s silence. Send heartbeats every ~1.7s to leave
+# margin for UDP drops — a single missed heartbeat at 10s cadence used to
+# blow past the 16s timeout. The legacy reference implementation pinged
+# every 100 packets (~1.7s at 60Hz) plus on every recvfrom timeout; we
+# do the same here.
+DEFAULT_HEARTBEAT_SECONDS = 1.7
 DEFAULT_DISCOVERY_TIMEOUT = 3.0
 
 
@@ -232,7 +237,30 @@ class Receiver:
             try:
                 data, _addr = self._sock.recvfrom(4096)
             except TimeoutError:
+                # GT7 disconnects after 16s of silence. Whenever recvfrom
+                # times out (default 1s), re-prod the PS5 from this socket so
+                # it remembers where to send telemetry. The legacy reference
+                # script does exactly this — its receive loop never goes more
+                # than ~1s without a heartbeat in flight, which kept GT7 awake
+                # through transient packet drops and pause/resume cycles.
                 self._recv_timeouts += 1
+                if self._target_ip is not None:
+                    try:
+                        self._sock.sendto(
+                            self.cfg.packet_format.encode("ascii"),
+                            (self._target_ip, self.cfg.port_tx),
+                        )
+                        self._heartbeats_sent += 1
+                        log.debug(
+                            "recvfrom timeout #%d -> re-prod heartbeat sent to %s:%d",
+                            self._recv_timeouts,
+                            self._target_ip,
+                            self.cfg.port_tx,
+                        )
+                    except OSError as exc:
+                        self._heartbeats_failed += 1
+                        if not self._stop.is_set():
+                            log.warning("re-prod heartbeat failed: %s", exc)
                 continue
             except OSError:
                 if self._stop.is_set():
