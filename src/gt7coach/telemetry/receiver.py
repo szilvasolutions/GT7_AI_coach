@@ -138,6 +138,14 @@ class Receiver:
         self._target_ip: str | None = None
         self._stop = threading.Event()
         self._heartbeat_thread: threading.Thread | None = None
+        self._stats_thread: threading.Thread | None = None
+        self._packets_decoded = 0
+        self._packets_short = 0
+        self._packets_failed = 0
+        self._recv_timeouts = 0
+        self._heartbeats_sent = 0
+        self._heartbeats_failed = 0
+        self._last_packet_at: float | None = None
 
     # ---- lifecycle ----------------------------------------------------------
 
@@ -169,6 +177,10 @@ class Receiver:
             target=self._heartbeat_loop, name="gt7-heartbeat", daemon=True
         )
         self._heartbeat_thread.start()
+        self._stats_thread = threading.Thread(
+            target=self._stats_loop, name="gt7-rx-stats", daemon=True
+        )
+        self._stats_thread.start()
         log.info(
             "receiver started on port %d, heartbeat -> %s:%d (format %r)",
             self.cfg.port_rx,
@@ -185,6 +197,18 @@ class Receiver:
         if self._heartbeat_thread is not None:
             self._heartbeat_thread.join(timeout=2.0)
             self._heartbeat_thread = None
+        if self._stats_thread is not None:
+            self._stats_thread.join(timeout=2.0)
+            self._stats_thread = None
+        log.info(
+            "receiver stopped. totals: packets=%d short=%d failed=%d timeouts=%d heartbeats=%d hb_failed=%d",
+            self._packets_decoded,
+            self._packets_short,
+            self._packets_failed,
+            self._recv_timeouts,
+            self._heartbeats_sent,
+            self._heartbeats_failed,
+        )
 
     # ---- main loop ----------------------------------------------------------
 
@@ -208,20 +232,25 @@ class Receiver:
             try:
                 data, _addr = self._sock.recvfrom(4096)
             except TimeoutError:
+                self._recv_timeouts += 1
                 continue
             except OSError:
                 if self._stop.is_set():
                     break
                 raise
             if len(data) < expected:
+                self._packets_short += 1
                 log.debug("ignoring short packet (%d bytes)", len(data))
                 continue
             try:
                 decrypted = decrypt_packet(data, fmt=self.cfg.packet_format)
                 pkt = parse_packet(decrypted, recv_time=monotonic())
             except (ValueError, IndexError) as exc:
+                self._packets_failed += 1
                 log.warning("packet parse failed: %s", exc)
                 continue
+            self._packets_decoded += 1
+            self._last_packet_at = monotonic()
             yield decrypted, pkt
 
     def run(self, on_packet: Callable[[Packet], None]) -> None:
@@ -245,18 +274,74 @@ class Receiver:
         """
         assert self._target_ip is not None
         heartbeat = self.cfg.packet_format.encode("ascii")
+        idx = 0
         while not self._stop.is_set():
             sock = self._sock
             if sock is None:
                 break
+            idx += 1
             try:
                 sock.sendto(heartbeat, (self._target_ip, self.cfg.port_tx))
+                self._heartbeats_sent += 1
+                log.debug(
+                    "heartbeat #%d sent -> %s:%d from port_rx=%d",
+                    idx,
+                    self._target_ip,
+                    self.cfg.port_tx,
+                    self.cfg.port_rx,
+                )
             except OSError as exc:
+                self._heartbeats_failed += 1
                 # Socket closed during shutdown is expected; anything else is real.
                 if not self._stop.is_set():
-                    log.warning("heartbeat send failed: %s", exc)
+                    log.warning("heartbeat #%d send failed: %s", idx, exc)
             if self._stop.wait(self.cfg.heartbeat_seconds):
                 break
+
+    def _stats_loop(self) -> None:
+        """Log packet-rate stats every 5 seconds so a session log shows when
+        the PS5 stopped sending and exactly when it stopped.
+        """
+        interval = 5.0
+        last_decoded = 0
+        last_timeouts = 0
+        silent_intervals = 0
+        while not self._stop.is_set():
+            if self._stop.wait(interval):
+                break
+            now = monotonic()
+            decoded = self._packets_decoded
+            delta_decoded = decoded - last_decoded
+            delta_timeouts = self._recv_timeouts - last_timeouts
+            last_decoded = decoded
+            last_timeouts = self._recv_timeouts
+            since_last_pkt = (
+                (now - self._last_packet_at) if self._last_packet_at is not None else None
+            )
+            if delta_decoded == 0:
+                silent_intervals += 1
+                last_pkt_str = (
+                    f"{since_last_pkt:.1f}s ago" if since_last_pkt is not None else "never"
+                )
+                log.warning(
+                    "rx stats: 0 packets in last %.0fs (timeouts=%d, hb_sent=%d, last_pkt=%s, silent_for=%.0fs)",
+                    interval,
+                    delta_timeouts,
+                    self._heartbeats_sent,
+                    last_pkt_str,
+                    silent_intervals * interval,
+                )
+            else:
+                silent_intervals = 0
+                log.info(
+                    "rx stats: %d packets/%ds (%.1f Hz, total=%d, timeouts=%d, hb=%d)",
+                    delta_decoded,
+                    int(interval),
+                    delta_decoded / interval,
+                    decoded,
+                    delta_timeouts,
+                    self._heartbeats_sent,
+                )
 
 
 @dataclass(slots=True)

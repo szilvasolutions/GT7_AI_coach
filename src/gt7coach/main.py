@@ -269,6 +269,35 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return p.parse_args(argv)
 
 
+def _attach_session_debug_log(session_dir: Path) -> Path:
+    """Attach a DEBUG-level FileHandler that writes every gt7coach.* log to
+    ``<session_dir>/debug.log``. Returns the log path. Third-party DEBUG
+    spam (comtypes, httpx, httpcore, google_genai internals) is filtered
+    to keep the file readable.
+    """
+    debug_path = session_dir / "debug.log"
+    fh = logging.FileHandler(debug_path, mode="w", encoding="utf-8")
+    fh.setLevel(logging.DEBUG)
+    fh.setFormatter(
+        logging.Formatter(
+            "%(asctime)s.%(msecs)03d %(levelname)s %(threadName)s %(name)s: %(message)s",
+            datefmt="%H:%M:%S",
+        )
+    )
+    noisy_prefixes = ("comtypes", "httpx", "httpcore", "google_genai", "urllib3", "asyncio")
+
+    class _NoiseFilter(logging.Filter):
+        def filter(self, record: logging.LogRecord) -> bool:
+            return not record.name.startswith(noisy_prefixes)
+
+    fh.addFilter(_NoiseFilter())
+    root = logging.getLogger()
+    if root.level > logging.DEBUG:
+        root.setLevel(logging.DEBUG)
+    root.addHandler(fh)
+    return debug_path
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     logging.basicConfig(
@@ -358,6 +387,10 @@ def main(argv: list[str] | None = None) -> int:
         for k, v in list(session._cli_args.items()):
             if isinstance(v, Path):
                 session._cli_args[k] = str(v)
+        debug_log_path = _attach_session_debug_log(session.dir)
+        log.info(
+            "debug log: %s (every detail; share this file when reporting issues)", debug_log_path
+        )
 
     # SessionLogger registers as the Advisor's on_result callback so the
     # async worker's final AdvisorResult / IncidentResult is what hits
