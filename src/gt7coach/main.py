@@ -19,6 +19,7 @@ import logging
 import os
 import signal
 import sys
+import time
 from collections.abc import Iterator
 from pathlib import Path
 from types import FrameType
@@ -380,7 +381,11 @@ def main(argv: list[str] | None = None) -> int:
         log.info("shutdown signal — draining")
         if rx is not None:
             rx.stop()
-        voice.stop()
+        # Do NOT stop the voice here. The finally block runs
+        # advisor.flush() which waits for the worker's in-flight LLM
+        # call to finish; the worker then voice.speak()s its result.
+        # Stopping voice now would kill the TTS thread and drop that
+        # last advice line on the floor.
 
     signal.signal(signal.SIGINT, _shutdown)
 
@@ -459,6 +464,12 @@ def main(argv: list[str] | None = None) -> int:
         # tear the voice down, so the last corner's advice still gets spoken.
         advisor.flush()
         advisor.stop()
+        # advisor.flush() returns once the worker has voice.speak()'d its
+        # result, but the TTS engine still needs time to actually play it.
+        # Poll voice.is_idle() with a bounded timeout before tearing down.
+        deadline = time.monotonic() + 5.0
+        while not voice.is_idle() and time.monotonic() < deadline:
+            time.sleep(0.05)
         voice.stop()
         if session is not None:
             session.close()
