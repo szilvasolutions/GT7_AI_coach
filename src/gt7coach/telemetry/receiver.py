@@ -232,19 +232,31 @@ class Receiver:
     # ---- heartbeat ----------------------------------------------------------
 
     def _heartbeat_loop(self) -> None:
+        """Send periodic heartbeats from the bound receive socket.
+
+        GT7's protocol: the PS5 sends telemetry back to the source port of the
+        most recent heartbeat it received. If we use a fresh unbound socket
+        here, the OS picks a random source port and the PS5 switches its
+        telemetry target away from port_rx (33740) — so the receive loop goes
+        deaf within seconds, even though the heartbeat thread is still firing.
+
+        Reference implementations (gt7dashboard, gt-telemetry) all send
+        heartbeats from the receive socket for exactly this reason.
+        """
         assert self._target_ip is not None
         heartbeat = self.cfg.packet_format.encode("ascii")
-        beacon_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            while not self._stop.is_set():
-                try:
-                    beacon_sock.sendto(heartbeat, (self._target_ip, self.cfg.port_tx))
-                except OSError as exc:
+        while not self._stop.is_set():
+            sock = self._sock
+            if sock is None:
+                break
+            try:
+                sock.sendto(heartbeat, (self._target_ip, self.cfg.port_tx))
+            except OSError as exc:
+                # Socket closed during shutdown is expected; anything else is real.
+                if not self._stop.is_set():
                     log.warning("heartbeat send failed: %s", exc)
-                if self._stop.wait(self.cfg.heartbeat_seconds):
-                    break
-        finally:
-            beacon_sock.close()
+            if self._stop.wait(self.cfg.heartbeat_seconds):
+                break
 
 
 @dataclass(slots=True)
