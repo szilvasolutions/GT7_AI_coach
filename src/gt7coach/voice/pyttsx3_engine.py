@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 from collections import deque
 
 log = logging.getLogger(__name__)
@@ -39,8 +40,10 @@ class PyttsxVoiceEngine:
         self._wake = threading.Event()
         self._stop = threading.Event()
         self._busy = False
+        self._utterance_idx = 0
         self._thread = threading.Thread(target=self._worker, name="gt7-tts", daemon=True)
         self._thread.start()
+        log.info("pyttsx3 voice engine starting (rate=%d)", self._rate)
 
     # ---- public ----------------------------------------------------------
 
@@ -51,8 +54,9 @@ class PyttsxVoiceEngine:
         with self._lock:
             if self._queue.maxlen and len(self._queue) == self._queue.maxlen:
                 dropped = self._queue.popleft()
-                log.debug("voice queue full, dropping oldest: %r", dropped)
+                log.warning("voice queue full, dropping oldest: %r", dropped)
             self._queue.append(text)
+        log.debug("voice.speak queued: %r (queue=%d)", text, len(self._queue))
         self._wake.set()
 
     def interrupt(self, text: str) -> None:
@@ -96,14 +100,26 @@ class PyttsxVoiceEngine:
                         break
                     text = self._queue.popleft()
                     self._busy = True
+                self._utterance_idx += 1
+                idx = self._utterance_idx
+                t0 = time.monotonic()
                 engine = None
                 try:
                     engine = pyttsx3.init()
                     engine.setProperty("rate", self._rate)
+                    t_init = time.monotonic() - t0
                     engine.say(text)
                     engine.runAndWait()
+                    t_total = time.monotonic() - t0
+                    log.info(
+                        "pyttsx3 utterance #%d done (init=%.0fms total=%.0fms): %r",
+                        idx,
+                        t_init * 1000,
+                        t_total * 1000,
+                        text,
+                    )
                 except Exception as exc:
-                    log.warning("pyttsx3 speak failed (%s): %r", exc, text)
+                    log.warning("pyttsx3 utterance #%d failed (%s): %r", idx, exc, text)
                 finally:
                     if engine is not None:
                         try:
