@@ -134,13 +134,16 @@ class OpenAIProvider:
 class GeminiProvider:
     """Google Gemini via the new ``google-genai`` SDK.
 
-    Three non-obvious things we configure:
+    Four non-obvious things we configure:
 
-    * **Default model is ``gemini-2.5-flash-lite``.** The full ``gemini-2.5-flash``
-      has a 20-requests/day free-tier quota that the coach blows through in a
-      single race; flash-lite has a much higher cap and is what the legacy
-      V23 script used successfully. Quality is sufficient for 4-12 word
-      imperatives.
+    * **Default model is ``gemini-2.5-flash``.** Earlier versions defaulted to
+      ``flash-lite`` thinking it had a higher daily cap, but a real race
+      session blew through the free-tier 20-RPD quota on flash-lite and
+      degraded to canned-fallback advice for the rest of the day. Plain
+      ``gemini-2.5-flash`` has a separate (higher) free-tier daily bucket
+      and similar latency / quality for our 4-12 word imperatives.
+      Override with ``--model gemini-2.5-flash-lite`` if you specifically
+      want the cheaper / lighter variant.
     * **Permissive safety thresholds.** The racing-coach corpus is benign and
       the default filter occasionally blocks helpful answers on racing verbs
       like "attack" / "punish".
@@ -154,7 +157,7 @@ class GeminiProvider:
       to the canned-phrase fallback in the advisor.
     """
 
-    DEFAULT_MODEL = "gemini-2.5-flash-lite"
+    DEFAULT_MODEL = "gemini-2.5-flash"
     _RETRY_STATUS_CODES = (429, 500, 502, 503, 504)
     _RETRY_DELAY_S = 1.0
 

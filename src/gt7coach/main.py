@@ -269,11 +269,23 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return p.parse_args(argv)
 
 
+_NOISY_LOGGER_PREFIXES = ("comtypes", "httpx", "httpcore", "google_genai", "urllib3", "asyncio")
+
+
+class _NoiseFilter(logging.Filter):
+    """Drop log records from noisy third-party libraries (their DEBUG/INFO
+    chatter is overwhelming and not useful to the user)."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        return not record.name.startswith(_NOISY_LOGGER_PREFIXES)
+
+
 def _attach_session_debug_log(session_dir: Path) -> Path:
     """Attach a DEBUG-level FileHandler that writes every gt7coach.* log to
-    ``<session_dir>/debug.log``. Returns the log path. Third-party DEBUG
-    spam (comtypes, httpx, httpcore, google_genai internals) is filtered
-    to keep the file readable.
+    ``<session_dir>/debug.log``. The third-party noise filter applies here
+    too. The root logger is raised to DEBUG so DEBUG records can reach this
+    handler; the stderr handler must therefore set its own level explicitly
+    or it'll start showing DEBUG chatter on the console.
     """
     debug_path = session_dir / "debug.log"
     fh = logging.FileHandler(debug_path, mode="w", encoding="utf-8")
@@ -284,12 +296,6 @@ def _attach_session_debug_log(session_dir: Path) -> Path:
             datefmt="%H:%M:%S",
         )
     )
-    noisy_prefixes = ("comtypes", "httpx", "httpcore", "google_genai", "urllib3", "asyncio")
-
-    class _NoiseFilter(logging.Filter):
-        def filter(self, record: logging.LogRecord) -> bool:
-            return not record.name.startswith(noisy_prefixes)
-
     fh.addFilter(_NoiseFilter())
     root = logging.getLogger()
     if root.level > logging.DEBUG:
@@ -300,11 +306,21 @@ def _attach_session_debug_log(session_dir: Path) -> Path:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-        stream=sys.stderr,
+    # Configure root + a single stderr handler we own. Don't use basicConfig
+    # because we need to pin the stderr handler's level explicitly (the file
+    # handler attached later raises root to DEBUG, which would otherwise let
+    # third-party DEBUG chatter through to the console).
+    root = logging.getLogger()
+    for existing in list(root.handlers):
+        root.removeHandler(existing)
+    stderr_handler = logging.StreamHandler(stream=sys.stderr)
+    stderr_handler.setLevel(logging.DEBUG if args.verbose else logging.INFO)
+    stderr_handler.setFormatter(
+        logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
     )
+    stderr_handler.addFilter(_NoiseFilter())
+    root.addHandler(stderr_handler)
+    root.setLevel(logging.DEBUG if args.verbose else logging.INFO)
 
     _load_env(args.env_file)
 
