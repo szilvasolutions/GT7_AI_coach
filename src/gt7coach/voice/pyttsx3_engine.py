@@ -108,7 +108,15 @@ class PyttsxVoiceEngine:
                     engine = pyttsx3.init()
                     engine.setProperty("rate", self._rate)
                     t_init = time.monotonic() - t0
-                    engine.say(text)
+                    # SAPI's audio device needs ~80-150 ms to warm up on the
+                    # first phoneme of each utterance — without padding, the
+                    # leading consonant of words like "Brake" or "Carry" gets
+                    # clipped. Prepending a short throwaway syllable + ellipsis
+                    # gives the device time to come up before the real content
+                    # hits the speakers. The leading text reads as a tiny
+                    # pause and is essentially inaudible.
+                    padded = ". " + text
+                    engine.say(padded)
                     engine.runAndWait()
                     t_total = time.monotonic() - t0
                     log.info(
