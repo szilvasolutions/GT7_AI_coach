@@ -482,6 +482,13 @@ def main(argv: list[str] | None = None) -> int:
         window = MainWindow()
         boot_log.debug("MainWindow constructed; calling show()")
         window.show()
+        # Force-bring the window to the front. On Windows, a Qt window
+        # spawned from a PowerShell-launched Python often appears BEHIND
+        # the terminal — show() draws it but doesn't push it to the top
+        # of the Z-order. raise_() + activateWindow() makes the window
+        # the active foreground window the way a user-launched .exe would.
+        window.raise_()
+        window.activateWindow()
 
         # Heartbeat: log every 5 s while the GUI is alive. If the operator
         # reports "the GUI exited with nothing", the heartbeats tell us
