@@ -206,21 +206,37 @@ class MainWindow(QMainWindow):
         )
 
     def _on_start(self) -> None:
+        log.info("=== Start button clicked ===")
         if self._runner.is_running():
+            log.info("Start: runner already running, ignoring click")
             return
         self._live_log.clear_log()
         self._status_panel.reset()
         self._lap_table.reset()
         self._advice_history.reset()
         opts = self._build_options()
+        log.info(
+            "Start: built options provider=%r voice=%r voice_rate=%d style=%r car_class=%r",
+            opts.provider,
+            opts.voice,
+            opts.voice_rate,
+            opts.driver_style,
+            opts.car_class,
+        )
+        log.info("Start: calling runner.start(opts)")
         try:
             self._runner.start(opts)
-        except Exception as exc:  # pragma: no cover — defensive
+        except Exception as exc:
+            log.exception("Start: runner.start() raised")
             QMessageBox.critical(self, "Failed to start", str(exc))
             return
+        log.info("Start: runner.start() returned (subprocess spawn requested)")
         # Begin tailing the status file the runner just allocated.
         if self._runner.status_file is not None:
+            log.info("Start: watching status file %s", self._runner.status_file)
             self._status_tail.watch(self._runner.status_file)
+        else:
+            log.warning("Start: runner has no status_file — subprocess probably refused to start")
 
     def _on_stop(self) -> None:
         if not self._runner.is_running():
