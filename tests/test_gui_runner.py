@@ -175,3 +175,127 @@ def test_runner_lifecycle_with_dummy_subprocess(qapp, tmp_path: Path, monkeypatc
     assert "Deep Forest" in status_text
 
     _ = original_start  # silence unused-var lint
+
+
+# ---- Phase D.1: failure-visibility regressions ----------------------------
+
+
+def test_start_failed_emitted_when_module_missing(qapp, monkeypatch) -> None:
+    """If python_module_available rejects the launch, start_failed must fire
+    with a useful reason and no QProcess must be created."""
+    from gt7coach.gui import runner as runner_mod
+
+    monkeypatch.setattr(runner_mod, "python_module_available", lambda _m: False)
+
+    r = CoachRunner()
+    reasons: list[str] = []
+    r.start_failed.connect(reasons.append)
+
+    r.start(CoachOptions(voice="null"))
+
+    assert reasons, "start_failed should have fired"
+    assert "gt7coach.main" in reasons[0]
+    assert "pip install" in reasons[0]
+    # No QProcess should have been spawned.
+    assert r.is_running() is False
+
+
+def test_state_running_only_after_qprocess_started(qapp, tmp_path, monkeypatch) -> None:
+    """state_changed must reach 'running' via the QProcess.started slot,
+    not synchronously inside start(). Regression for the bug where the
+    GUI claimed 'running' even when QProcess immediately errored out."""
+    from PySide6.QtCore import QProcess, QProcessEnvironment
+
+    # A dummy subprocess that does a tiny stderr write then sleeps long
+    # enough to confirm "running" has settled before we kill it.
+    dummy = tmp_path / "dummy.py"
+    dummy.write_text(
+        "import sys, time; print('booting', file=sys.stderr, flush=True); time.sleep(0.5)",
+        encoding="utf-8",
+    )
+
+    r = CoachRunner()
+    states: list[str] = []
+    ready_count = {"n": 0}
+    r.state_changed.connect(states.append)
+    r.process_ready.connect(lambda: ready_count.__setitem__("n", ready_count["n"] + 1))
+
+    # Bypass module-availability + replace argv with our dummy script.
+    monkeypatch.setattr("gt7coach.gui.runner.python_module_available", lambda _m: True)
+
+    original_start = r.start
+
+    def patched_start(opts):
+        sf = tmp_path / "status.jsonl"
+        r._status_file = sf
+        env = QProcessEnvironment.systemEnvironment()
+        env.insert("GT7COACH_STATUS_FILE", str(sf))
+        r._proc = QProcess(r)
+        r._proc.setProgram(sys.executable)
+        r._proc.setArguments([str(dummy)])
+        r._proc.setProcessEnvironment(env)
+        r._proc.setProcessChannelMode(QProcess.ProcessChannelMode.SeparateChannels)
+        r._proc.readyReadStandardOutput.connect(r._on_stdout)
+        r._proc.readyReadStandardError.connect(r._on_stderr)
+        r._proc.finished.connect(r._on_finished)
+        r._proc.errorOccurred.connect(r._on_error)
+        r._proc.started.connect(r._on_started)
+        r.state_changed.emit("starting")
+        r._proc.start()
+
+    monkeypatch.setattr(r, "start", patched_start)
+    r.start(CoachOptions(voice="null"))
+
+    # Wait for both 'running' and 'stopped' to land.
+    _wait_for(lambda: "stopped" in states, timeout_ms=5000)
+
+    # First two state transitions must be starting -> running (and nothing in
+    # between). 'running' must NOT have been emitted from inside start().
+    assert states[0] == "starting"
+    assert states[1] == "running"
+    assert ready_count["n"] == 1, "process_ready should fire exactly once"
+    _ = original_start
+
+
+def test_stderr_mirrored_to_sys_stderr(qapp, tmp_path, monkeypatch, capsys) -> None:
+    """Every captured stderr line must also flow to sys.stderr with the
+    [coach] prefix so the operator's terminal has a paper trail."""
+    from PySide6.QtCore import QProcess, QProcessEnvironment
+
+    dummy = tmp_path / "stderr_emitter.py"
+    dummy.write_text(
+        'import sys; print("HELLO FROM COACH", file=sys.stderr, flush=True)',
+        encoding="utf-8",
+    )
+
+    r = CoachRunner()
+    seen_signal: list[str] = []
+    r.stderr_line.connect(seen_signal.append)
+
+    monkeypatch.setattr("gt7coach.gui.runner.python_module_available", lambda _m: True)
+
+    def patched_start(_opts):
+        sf = tmp_path / "status.jsonl"
+        r._status_file = sf
+        env = QProcessEnvironment.systemEnvironment()
+        env.insert("GT7COACH_STATUS_FILE", str(sf))
+        r._proc = QProcess(r)
+        r._proc.setProgram(sys.executable)
+        r._proc.setArguments([str(dummy)])
+        r._proc.setProcessEnvironment(env)
+        r._proc.setProcessChannelMode(QProcess.ProcessChannelMode.SeparateChannels)
+        r._proc.readyReadStandardError.connect(r._on_stderr)
+        r._proc.finished.connect(r._on_finished)
+        r._proc.errorOccurred.connect(r._on_error)
+        r._proc.started.connect(r._on_started)
+        r._proc.start()
+
+    monkeypatch.setattr(r, "start", patched_start)
+    r.start(CoachOptions(voice="null"))
+    _wait_for(lambda: bool(seen_signal), timeout_ms=5000)
+
+    # The signal fired (LiveLog widget would have got it).
+    assert any("HELLO FROM COACH" in line for line in seen_signal)
+    # And sys.stderr saw a copy with the prefix.
+    captured = capsys.readouterr().err
+    assert "[coach] HELLO FROM COACH" in captured

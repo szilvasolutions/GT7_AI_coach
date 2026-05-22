@@ -78,6 +78,16 @@ class CoachRunner(QObject):
     stderr_line = Signal(str)
     state_changed = Signal(str)  # "starting" | "running" | "stopping" | "stopped"
     exited = Signal(int)  # exit code (Qt's int — 0 on clean exit)
+    # Emitted with a human-readable reason whenever Start cannot reach the
+    # "running" state (pre-flight rejected the launch, or QProcess errored
+    # out before/during spawn). MainWindow shows a QMessageBox.critical on
+    # this so any failure is immediately visible to the operator.
+    start_failed = Signal(str)
+    # Emitted exactly once per subprocess from the QProcess.started slot
+    # (i.e. the OS has spawned the process and it's actually running).
+    # Distinct from state_changed("running") so MainWindow can stamp a
+    # monotonic clock for the immediate-crash detector.
+    process_ready = Signal()
 
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -101,6 +111,17 @@ class CoachRunner(QObject):
             log.warning("runner already running; ignoring start()")
             return
 
+        # Pre-flight: confirm the module is importable from sys.executable.
+        # Without this, a broken install surfaces as a generic
+        # QProcess.FailedToStart with no useful diagnostic on Windows.
+        if not python_module_available("gt7coach.main"):
+            self.start_failed.emit(
+                "gt7coach.main is not importable from this Python interpreter.\n"
+                f"  sys.executable: {sys.executable}\n\n"
+                'Reinstall with:  pip install -e ".[gui]"'
+            )
+            return
+
         # Allocate a fresh status file under the user's temp dir. Phase B's
         # status emitter truncates it on first emit, so stale content is OK.
         tmpdir = Path(tempfile.gettempdir()) / "gt7coach-gui"
@@ -110,6 +131,8 @@ class CoachRunner(QObject):
         env = QProcessEnvironment.systemEnvironment()
         env.insert("GT7COACH_STATUS_FILE", str(self._status_file))
 
+        cwd = Path.cwd()
+
         self._proc = QProcess(self)
         self._proc.setProgram(sys.executable)
         # Use the module entry point so the subprocess works whether the user
@@ -117,13 +140,22 @@ class CoachRunner(QObject):
         # already exposes the gt7coach package on sys.path.
         self._proc.setArguments(["-m", "gt7coach.main", *options.to_argv()])
         self._proc.setProcessEnvironment(env)
+        # Pin the working directory so .env / config.yaml auto-discovery sees
+        # the place the GUI was launched from, no matter what the GUI does
+        # later. Also makes the path obvious in the live log.
+        self._proc.setWorkingDirectory(str(cwd))
         self._proc.setProcessChannelMode(QProcess.ProcessChannelMode.SeparateChannels)
         self._proc.readyReadStandardOutput.connect(self._on_stdout)
         self._proc.readyReadStandardError.connect(self._on_stderr)
         self._proc.finished.connect(self._on_finished)
         self._proc.errorOccurred.connect(self._on_error)
+        self._proc.started.connect(self._on_started)
 
-        log.info("starting gt7coach-coach with argv=%r", options.to_argv())
+        log.info(
+            "starting gt7coach-coach: cwd=%s argv=%r",
+            cwd,
+            options.to_argv(),
+        )
         self.state_changed.emit("starting")
         # On Windows, CREATE_NEW_PROCESS_GROUP is needed if we want to send
         # CTRL_BREAK_EVENT later. Qt doesn't expose that flag directly; we
@@ -131,7 +163,9 @@ class CoachRunner(QObject):
         # signal on each platform, and the existing main.py shutdown handler
         # (commit 3937e8d) treats a second SIGINT as force-quit.
         self._proc.start()
-        self.state_changed.emit("running")
+        # NB: do NOT emit "running" here. QProcess.start() is async; the
+        # state only becomes truly Running once the OS has spawned the
+        # process. _on_started below handles that transition.
 
     def stop(self) -> None:
         """Send a graceful stop signal. Second call force-kills."""
@@ -171,6 +205,20 @@ class CoachRunner(QObject):
             line, self._stderr_buf = self._stderr_buf.split("\n", 1)
             if line:
                 self.stderr_line.emit(line)
+                # Also stream to the GUI's own stderr so the operator's
+                # terminal has a paper trail even if the GUI window
+                # disappears (uncaught slot exception, native crash, etc).
+                try:
+                    sys.stderr.write(f"[coach] {line}\n")
+                    sys.stderr.flush()
+                except (OSError, ValueError):
+                    # sys.stderr may be closed (e.g. PyInstaller windowed bundle).
+                    pass
+
+    def _on_started(self) -> None:
+        """QProcess.started — the OS has confirmed the spawn succeeded."""
+        self.state_changed.emit("running")
+        self.process_ready.emit()
 
     def _on_finished(self, exit_code: int, _exit_status) -> None:
         log.info("subprocess finished, exit_code=%d", exit_code)
@@ -183,7 +231,16 @@ class CoachRunner(QObject):
         self._proc = None
 
     def _on_error(self, error) -> None:
-        log.warning("subprocess error: %s", error)
+        msg = self._proc.errorString() if self._proc is not None else str(error)
+        try:
+            error_name = error.name  # PySide6 enum -> human readable
+        except AttributeError:
+            error_name = str(error)
+        log.warning("QProcess error %s: %s", error_name, msg)
+        # Tell MainWindow exactly what went wrong. Without this signal the
+        # operator gets the status bar flickering from "running" to "stopped"
+        # with no popup and no clue what to fix.
+        self.start_failed.emit(f"{error_name}: {msg}")
         # On QProcess.FailedToStart we never get a `finished` signal, so
         # emit a synthetic exit so the UI returns to the idle state.
         if self._proc is not None and self._proc.state() == QProcess.ProcessState.NotRunning:

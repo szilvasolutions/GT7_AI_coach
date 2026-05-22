@@ -13,8 +13,10 @@ the update banner come in Phase C / C.5.
 from __future__ import annotations
 
 import argparse
+import collections
 import logging
 import sys
+import time
 from pathlib import Path
 
 from PySide6.QtCore import Qt
@@ -179,7 +181,16 @@ class MainWindow(QMainWindow):
         self._runner.stdout_line.connect(self._live_log.append_line)
         self._runner.state_changed.connect(self._on_runner_state)
         self._runner.exited.connect(self._on_runner_exit)
+        self._runner.start_failed.connect(self._on_start_failed)
+        self._runner.process_ready.connect(self._on_process_ready)
         self._status_tail.event.connect(self._on_status_event)
+
+        # State for the immediate-crash detector. process_ready stamps
+        # the monotonic start time; if exited fires within ~5 s of that
+        # stamp with a non-zero code, we surface the captured stderr.
+        self._process_started_at: float | None = None
+        self._recent_stderr: collections.deque[str] = collections.deque(maxlen=20)
+        self._runner.stderr_line.connect(self._recent_stderr.append)
 
     # ---- handlers ---------------------------------------------------------
 
@@ -221,14 +232,49 @@ class MainWindow(QMainWindow):
         self._start_action.setEnabled(not running)
         self._stop_action.setEnabled(running)
 
+    def _on_process_ready(self) -> None:
+        """Stamps the moment the subprocess actually entered Running.
+        The immediate-crash detector in _on_runner_exit uses this to
+        decide whether to pop up the captured stderr."""
+        self._process_started_at = time.monotonic()
+
+    def _on_start_failed(self, reason: str) -> None:
+        """The runner couldn't reach Running. Show the reason loudly so
+        a broken install / bad config can't fail silently."""
+        QMessageBox.critical(
+            self,
+            "Coach failed to start",
+            reason + "\n\nIf this keeps happening, try the bare CLI in PowerShell:\n"
+            "    gt7coach-coach --provider gemini",
+        )
+
     def _on_runner_exit(self, exit_code: int) -> None:
         self._status_tail.stop()
+        ran_for = (
+            time.monotonic() - self._process_started_at
+            if self._process_started_at is not None
+            else None
+        )
+        self._process_started_at = None
+
         if exit_code == 0:
             self.statusBar().showMessage("Stopped cleanly.")
         elif exit_code == 130:
             self.statusBar().showMessage("Force-stopped (second Ctrl+C / second Stop).")
         else:
             self.statusBar().showMessage(f"Subprocess exited with code {exit_code}.")
+
+        # Immediate-crash detector. If the subprocess actually reached
+        # Running but died within 5 s with a non-zero code, the user
+        # almost certainly didn't see anything useful — pop up the last
+        # ~20 stderr lines so the actual exception is right in their face.
+        if exit_code not in (0, 130) and ran_for is not None and ran_for < 5.0:
+            tail = "\n".join(self._recent_stderr) or "(no stderr captured)"
+            QMessageBox.warning(
+                self,
+                f"Coach crashed after {ran_for:.1f}s",
+                f"Exit code: {exit_code}\n\nLast log lines:\n\n{tail}",
+            )
 
     def _on_status_event(self, ev: StatusEvent) -> None:
         self._status_panel.on_status_event(ev)
