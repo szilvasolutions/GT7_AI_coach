@@ -24,6 +24,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from types import FrameType
 
+from gt7coach import status
 from gt7coach.coach import (
     Advisor,
     AdvisorConfig,
@@ -482,6 +483,7 @@ def main(argv: list[str] | None = None) -> int:
                 tr = track_detector.feed(packet)
                 if tr is not None:
                     advisor.set_track_shape(tr.shape_description)
+                    status.emit("track", id=tr.id, name=tr.name)
             else:
                 track_detector.feed(packet)  # keeps the sticky-release timer fresh
             lap_tracker.feed_packet(packet)
@@ -494,6 +496,12 @@ def main(argv: list[str] | None = None) -> int:
                     incident.type,
                     incident.severity,
                     incident.evidence.get("speed_kmh", 0.0),
+                )
+                status.emit(
+                    "incident",
+                    incident_type=incident.type,
+                    severity=incident.severity,
+                    speed_kmh=incident.evidence.get("speed_kmh", 0.0),
                 )
                 advisor.on_incident(incident)
             trace = seg.feed(packet)
@@ -510,6 +518,16 @@ def main(argv: list[str] | None = None) -> int:
                 trace.exit_speed_kmh,
                 trace.peak_lat_g,
                 len(events),
+            )
+            status.emit(
+                "corner",
+                corner_idx=corner_idx,
+                duration_s=trace.duration_s,
+                entry_speed_kmh=trace.entry_speed_kmh,
+                min_speed_kmh=trace.min_speed_kmh,
+                exit_speed_kmh=trace.exit_speed_kmh,
+                peak_lat_g=trace.peak_lat_g,
+                event_count=len(events),
             )
             if session is not None:
                 session.log_corner(corner_idx, trace, events)

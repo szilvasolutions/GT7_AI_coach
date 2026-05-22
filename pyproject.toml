@@ -36,6 +36,7 @@ gemini = ["google-genai>=0.3"]
 ollama = ["requests>=2.32"]
 voice = ["pyttsx3>=2.90"]
 piper = ["piper-tts>=1.2", "simpleaudio>=1.0"]
+gui = ["PySide6>=6.6"]
 all = [
     "anthropic>=0.39",
     "openai>=1.40",
@@ -44,6 +45,7 @@ all = [
     "pyttsx3>=2.90",
     "piper-tts>=1.2",
     "simpleaudio>=1.0",
+    "PySide6>=6.6",
 ]
 
 [project.urls]
@@ -56,6 +58,7 @@ gt7coach-coach = "gt7coach.main:main"
 gt7coach-list-tracks = "gt7coach.list_tracks:main"
 gt7coach-test-voice = "gt7coach.voice_test:main"
 gt7coach-setup = "gt7coach.setup_wizard:main"
+gt7coach-gui = "gt7coach.gui.app:main"
 
 [tool.setuptools.package-data]
 "gt7coach.tracks" = ["data/*.json", "data/*.md"]

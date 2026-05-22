@@ -386,6 +386,20 @@ class Receiver:
                     delta_timeouts,
                     self._heartbeats_sent,
                 )
+            try:
+                from gt7coach import status as _status
+
+                _status.emit(
+                    "rx_stats",
+                    hz=delta_decoded / interval,
+                    delta_packets=delta_decoded,
+                    total_packets=decoded,
+                    timeouts=delta_timeouts,
+                    heartbeats=self._heartbeats_sent,
+                    silent_for_s=silent_intervals * interval if delta_decoded == 0 else 0.0,
+                )
+            except Exception:  # pragma: no cover
+                pass
 
 
 @dataclass(slots=True)

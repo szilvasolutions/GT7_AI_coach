@@ -163,6 +163,19 @@ class LapTracker:
 
         self.voice.interrupt(text)
         log.info("lap %d done: %s", self._last_lap_count, text)
+        try:
+            from gt7coach import status as _status
+
+            _status.emit(
+                "lap",
+                lap=self._last_lap_count,
+                last_lap_ms=last_lap_ms,
+                best_lap_ms=self._best_lap_ms,
+                delta_ms=delta_ms,
+                summary=text,
+            )
+        except Exception:  # pragma: no cover
+            pass
         self.history.append(
             {
                 "lap": self._last_lap_count,

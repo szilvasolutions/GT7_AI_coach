@@ -574,6 +574,18 @@ class Advisor:
                 chosen_event.type if chosen_event else "?",
                 chosen_event.severity if chosen_event else 0.0,
             )
+            try:
+                from gt7coach import status as _status
+
+                _status.emit(
+                    "advice",
+                    advice=advice,
+                    corner_idx=corner_idx,
+                    event_type=chosen_event.type if chosen_event else None,
+                    event_severity=chosen_event.severity if chosen_event else 0.0,
+                )
+            except Exception:  # pragma: no cover — defensive
+                pass
         elif chosen_event is not None and reason:
             log.debug(
                 "coach suppressed (%s): %s sev=%.2f",
