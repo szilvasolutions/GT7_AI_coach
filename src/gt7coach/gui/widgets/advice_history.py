@@ -44,5 +44,10 @@ class AdviceHistory(QListWidget):
         self.addItem(item)
         self.scrollToBottom()
 
-    def reset(self) -> None:
+    def clear_all(self) -> None:
+        """Wipe the history. NOTE: deliberately NOT named ``reset()`` —
+        ``QAbstractItemView.reset()`` is a virtual Qt slot and overriding
+        it has caused silent stack-overflow recursion on Windows when
+        ``QListWidget.clear()`` internally re-enters the view's reset
+        machinery. Keep this name unique."""
         self.clear()

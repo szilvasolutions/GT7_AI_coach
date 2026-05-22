@@ -234,12 +234,12 @@ class MainWindow(QMainWindow):
             return
         log.debug("Start: clearing live log")
         self._live_log.clear_log()
-        log.debug("Start: resetting status panel")
-        self._status_panel.reset()
-        log.debug("Start: resetting lap table")
-        self._lap_table.reset()
-        log.debug("Start: resetting advice history")
-        self._advice_history.reset()
+        log.debug("Start: clearing status panel")
+        self._status_panel.clear_all()
+        log.debug("Start: clearing lap table")
+        self._lap_table.clear_all()
+        log.debug("Start: clearing advice history")
+        self._advice_history.clear_all()
         log.debug("Start: building options")
         opts = self._build_options()
         log.info(

@@ -71,7 +71,7 @@ def test_lap_table_ignores_invalid_lap_time(qapp) -> None:
 def test_lap_table_reset_clears(qapp) -> None:
     t = LapTable()
     t.on_status_event(_lap(1, 90_000, 90_000))
-    t.reset()
+    t.clear_all()
     assert t.rowCount() == 0
 
 

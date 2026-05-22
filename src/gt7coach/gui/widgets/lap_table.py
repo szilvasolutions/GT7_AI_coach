@@ -72,7 +72,10 @@ class LapTable(QTableWidget):
             self._apply_best_highlight(row)
         self.scrollToBottom()
 
-    def reset(self) -> None:
+    def clear_all(self) -> None:
+        """Wipe the table. NOT named ``reset()`` — see the comment on
+        AdviceHistory.clear_all. Overriding the Qt virtual ``reset()``
+        slot triggers infinite recursion on Windows in some scenarios."""
         self.setRowCount(0)
         self._best_row = -1
         self._best_lap_ms = -1

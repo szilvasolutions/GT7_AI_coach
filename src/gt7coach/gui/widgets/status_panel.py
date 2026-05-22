@@ -148,7 +148,9 @@ class StatusPanel(QWidget):
 
     # ---- lifecycle helpers -------------------------------------------------
 
-    def reset(self) -> None:
+    def clear_all(self) -> None:
+        """Wipe the panel back to idle state. Renamed from ``reset()`` for
+        consistency with the sibling widgets — see AdviceHistory.clear_all."""
         self._dot.set_color("#888888")
         self._conn_label.setText("Idle")
         self._track_label.setText("—")
