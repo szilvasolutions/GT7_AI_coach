@@ -240,16 +240,10 @@ class MainWindow(QMainWindow):
         dlg.exec()
 
     def _on_download_update(self, info: UpdateInfo) -> None:
-        """Hook for Phase D's self-updater. For now (pre-Phase-D) we
-        show a message explaining the user has to download manually."""
-        QMessageBox.information(
-            self,
-            "Update available",
-            f"Release {info.tag} is ready.\n\n"
-            "Self-updating from the GUI lands in the next release. "
-            "Click 'View release' to download and replace the install "
-            "folder manually.",
-        )
+        """Drive the self-update flow: download, verify, spawn updater.exe."""
+        from gt7coach.gui.self_update import run_update_flow
+
+        run_update_flow(self, info)
 
     def _on_voice_test(self) -> None:
         """Speak a test phrase in-process using the toolbar's current

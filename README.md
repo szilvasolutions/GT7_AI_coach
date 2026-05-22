@@ -51,7 +51,26 @@ about throttle" failure mode of the original prototype.
 Tested on Windows 11. Linux / macOS should work for the recorder and the
 replay path; live UDP needs the PS5 to be reachable on the LAN.
 
-## Setup — step by step
+## Download (Windows binary)
+
+The easiest path on Windows is the pre-built bundle. No Python, no
+git, no command line.
+
+1. Go to the [latest release page](https://github.com/szilvasolutions/GT7_AI_coach/releases/latest).
+2. Download `GT7Coach-vX.Y.Z-win64.zip`.
+3. Unzip somewhere with write access (e.g. `C:\GT7Coach\`). **Avoid
+   `Program Files`** — the in-app updater needs to write into the
+   install folder.
+4. Double-click `GT7Coach.exe`.
+5. On first launch, use **Tools → Configure** to pick a provider and
+   paste your API key. Then **Start**.
+
+Windows SmartScreen will warn about an unknown publisher on first
+launch — click "More info" → "Run anyway". Code-signing is on the
+roadmap. The GUI auto-checks GitHub Releases on launch and offers a
+one-click in-app update when a newer build is published.
+
+## Setup — from source (developers)
 
 ### 1. Clone and create a virtual environment
 

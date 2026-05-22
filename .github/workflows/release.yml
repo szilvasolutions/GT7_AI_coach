@@ -1,0 +1,115 @@
+name: Release Windows bundle
+
+# Fires when a tag matching v* is pushed (e.g. ``git tag v0.1.0 && git push --tags``).
+# Builds the GT7Coach.exe + updater.exe via PyInstaller, zips the dist folder,
+# computes a SHA-256 sums file, and attaches everything to a new GitHub Release.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to build (e.g. v0.1.0-rc1) — for manual runs only"
+        required: true
+        default: "vdev"
+
+permissions:
+  contents: write  # needed to create the release
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Resolve tag
+        id: vars
+        shell: pwsh
+        run: |
+          $tag = "${{ github.event.inputs.tag }}"
+          if (-not $tag) { $tag = "${{ github.ref_name }}" }
+          echo "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          $version = $tag.TrimStart("v")
+          echo "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Install build dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller>=6.0
+          pip install -e ".[gui,all]"
+
+      - name: Build GT7Coach.exe
+        shell: pwsh
+        run: |
+          pyinstaller --noconfirm packaging/gt7coach.spec
+
+      - name: Build updater.exe
+        shell: pwsh
+        run: |
+          pyinstaller --noconfirm packaging/updater.spec
+
+      - name: Merge updater into GT7Coach folder
+        shell: pwsh
+        run: |
+          Copy-Item -Recurse -Force dist/updater/* dist/GT7Coach/
+          Copy-Item packaging/README_distro.txt dist/GT7Coach/README.txt
+
+      - name: Smoke-test that GT7Coach.exe at least launches
+        shell: pwsh
+        run: |
+          # We can't really "use" the GUI on a headless runner, but we can
+          # confirm the binary is well-formed by asking it for --help.
+          # PySide6 windowed apps don't have stdout for --help, so we
+          # instead just verify the file exists and runs the GUI for 1
+          # second before being killed. Failure here typically means a
+          # missing hidden import or a broken hidden module.
+          $exe = "dist/GT7Coach/GT7Coach.exe"
+          if (-not (Test-Path $exe)) {
+            throw "GT7Coach.exe not produced by PyInstaller"
+          }
+          $proc = Start-Process -FilePath $exe -PassThru -WindowStyle Hidden
+          Start-Sleep -Seconds 3
+          if ($proc.HasExited -and $proc.ExitCode -ne 0) {
+            throw "GT7Coach.exe exited prematurely with code $($proc.ExitCode)"
+          }
+          Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+          echo "smoke ok"
+
+      - name: Zip the distribution
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.vars.outputs.tag }}"
+          $zipName = "GT7Coach-$tag-win64.zip"
+          Push-Location dist
+          Compress-Archive -Path GT7Coach -DestinationPath $zipName
+          Pop-Location
+          echo "ZIP_PATH=dist/$zipName" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "ZIP_NAME=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Compute SHA-256
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash -Algorithm SHA256 -Path $env:ZIP_PATH).Hash.ToLower()
+          $line = "$hash *$env:ZIP_NAME"
+          $line | Out-File -FilePath dist/SHA256SUMS.txt -Encoding ascii
+          echo "Computed SHA256: $hash"
+
+      - name: Upload artifacts to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.tag }}
+          name: GT7 AI Coach ${{ steps.vars.outputs.tag }}
+          draft: true
+          generate_release_notes: true
+          files: |
+            ${{ env.ZIP_PATH }}
+            dist/SHA256SUMS.txt
