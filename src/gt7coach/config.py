@@ -115,6 +115,61 @@ def default_config() -> LoadedConfig:
     )
 
 
+def save(cfg: LoadedConfig, path: str | Path) -> None:
+    """Write the relevant subset of ``cfg`` back to ``path`` as YAML.
+
+    Symmetrical to :func:`load`: the file produced is one ``load(...)``
+    call can re-read into an equivalent ``LoadedConfig``. We only emit
+    the fields a user is likely to want to edit — the dense detector
+    threshold structs stay defaults unless explicitly set.
+
+    PyYAML is the only dep; same as :func:`load`.
+    """
+    try:
+        import yaml
+    except ImportError as exc:
+        raise RuntimeError("PyYAML is required to save config.yaml. pip install PyYAML") from exc
+
+    data: dict[str, Any] = {
+        "network": {
+            "ps5_ip": cfg.network.ps5_ip or "auto",
+            "port_rx": int(cfg.network.port_rx),
+            "port_tx": int(cfg.network.port_tx),
+            "heartbeat_seconds": float(cfg.network.heartbeat_seconds),
+            "packet_format": str(cfg.network.packet_format),
+        },
+        "coach": {
+            "provider": str(cfg.coach_provider),
+            "driver_style": str(cfg.advisor.driver_style),
+            "global_rate_limit_seconds": float(cfg.rate_limiter.global_cooldown_s),
+        },
+        "voice": {
+            "engine": str(cfg.voice.engine),
+            "speed": int(cfg.voice.speed),
+        },
+        "session": {
+            "log_dir": str(cfg.session.log_dir),
+            "generate_summary": bool(cfg.session.generate_summary),
+        },
+    }
+    if cfg.coach_model:
+        data["coach"]["model"] = str(cfg.coach_model)
+    if cfg.coach_car_class:
+        data["coach"]["car_class"] = str(cfg.coach_car_class)
+    if cfg.coach_track:
+        data["coach"]["track"] = str(cfg.coach_track)
+    if cfg.voice.engine == "piper":
+        data["voice"]["piper_voice"] = cfg.voice.piper_voice
+        if cfg.voice.piper_model_path:
+            data["voice"]["piper_model_path"] = cfg.voice.piper_model_path
+
+    Path(path).write_text(
+        "# Written by gt7coach. CLI flags still override anything in this file.\n"
+        + yaml.safe_dump(data, sort_keys=False, default_flow_style=False),
+        encoding="utf-8",
+    )
+
+
 def load(path: str | Path | None = None) -> LoadedConfig:
     """Load ``config.yaml`` if it exists; otherwise return defaults."""
     cfg = default_config()

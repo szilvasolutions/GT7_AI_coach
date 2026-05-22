@@ -30,13 +30,17 @@ from PySide6.QtWidgets import (
     QSlider,
     QSplitter,
     QStatusBar,
+    QTabWidget,
     QToolBar,
     QVBoxLayout,
     QWidget,
 )
 
+from gt7coach.gui.config_panel import ConfigDialog
 from gt7coach.gui.log_tail import StatusEvent, StatusTail
 from gt7coach.gui.runner import CoachOptions, CoachRunner
+from gt7coach.gui.widgets.advice_history import AdviceHistory
+from gt7coach.gui.widgets.lap_table import LapTable
 from gt7coach.gui.widgets.live_log import LiveLog
 from gt7coach.gui.widgets.status_panel import StatusPanel
 
@@ -105,16 +109,23 @@ class MainWindow(QMainWindow):
         self._car_class_edit.setFixedWidth(160)
         toolbar.addWidget(self._car_class_edit)
 
-        # --- Central split (status | log) --------------------------------
+        # --- Central split (tabbed-left | log) ---------------------------
         self._status_panel = StatusPanel()
+        self._lap_table = LapTable()
+        self._advice_history = AdviceHistory()
         self._live_log = LiveLog()
 
+        left_tabs = QTabWidget()
+        left_tabs.addTab(self._status_panel, "Status")
+        left_tabs.addTab(self._lap_table, "Laps")
+        left_tabs.addTab(self._advice_history, "Advice")
+
         splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.addWidget(self._status_panel)
+        splitter.addWidget(left_tabs)
         splitter.addWidget(self._live_log)
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
-        splitter.setSizes([360, 740])
+        splitter.setSizes([400, 700])
 
         central = QWidget()
         layout = QVBoxLayout(central)
@@ -135,6 +146,15 @@ class MainWindow(QMainWindow):
         quit_action = QAction("Quit", self)
         quit_action.triggered.connect(self.close)
         file_menu.addAction(quit_action)
+
+        # --- Tools menu ---------------------------------------------------
+        tools_menu = self.menuBar().addMenu("&Tools")
+        configure_action = QAction("Configure…", self)
+        configure_action.triggered.connect(self._open_config_dialog)
+        tools_menu.addAction(configure_action)
+        voice_test_action = QAction("Test voice", self)
+        voice_test_action.triggered.connect(self._on_voice_test)
+        tools_menu.addAction(voice_test_action)
 
         # --- Wire signals -------------------------------------------------
         self._runner.stderr_line.connect(self._live_log.append_line)
@@ -160,6 +180,8 @@ class MainWindow(QMainWindow):
             return
         self._live_log.clear_log()
         self._status_panel.reset()
+        self._lap_table.reset()
+        self._advice_history.reset()
         opts = self._build_options()
         try:
             self._runner.start(opts)
@@ -192,6 +214,39 @@ class MainWindow(QMainWindow):
 
     def _on_status_event(self, ev: StatusEvent) -> None:
         self._status_panel.on_status_event(ev)
+        self._lap_table.on_status_event(ev)
+        self._advice_history.on_status_event(ev)
+
+    def _open_config_dialog(self) -> None:
+        dlg = ConfigDialog(self)
+        dlg.exec()
+
+    def _on_voice_test(self) -> None:
+        """Speak a test phrase in-process using the toolbar's current
+        voice settings. Runs on a short-lived thread so we don't block
+        the Qt event loop while pyttsx3 warms up the audio device."""
+        from threading import Thread
+
+        engine = self._voice_combo.currentText()
+        rate = self._voice_rate.value()
+
+        def worker() -> None:
+            try:
+                from gt7coach.voice import make_voice
+
+                voice = make_voice(engine, rate=rate)
+                voice.speak("Coach ready. Testing voice.")
+                import time as _time
+
+                deadline = _time.monotonic() + 8.0
+                while not voice.is_idle() and _time.monotonic() < deadline:
+                    _time.sleep(0.05)
+                voice.stop()
+            except Exception as exc:  # pragma: no cover — defensive
+                log.warning("voice test failed: %s", exc)
+
+        Thread(target=worker, name="gt7-gui-voice-test", daemon=True).start()
+        self.statusBar().showMessage(f"Speaking test phrase via {engine}…")
 
     def _open_last_session(self) -> None:
         # The default log dir is ./sessions; offer that as the starting

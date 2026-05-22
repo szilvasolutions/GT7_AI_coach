@@ -21,15 +21,22 @@ import pytest
 pytest.importorskip("PySide6", reason="PySide6 not installed; skipping GUI tests")
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtCore import QCoreApplication, QEventLoop, QTimer
+from PySide6.QtCore import QEventLoop, QTimer
+from PySide6.QtWidgets import QApplication
 
 from gt7coach.gui.runner import CoachOptions, CoachRunner
 
 
 @pytest.fixture(scope="module")
 def qapp():
-    """One QCoreApplication for the whole test module."""
-    app = QCoreApplication.instance() or QCoreApplication([])
+    """One QApplication shared across all GUI tests in the session.
+
+    QCoreApplication is not subclass-compatible with QApplication. If a
+    QCoreApplication is created first and a later test asks for a
+    QApplication, Qt aborts the process. Standardising on QApplication
+    here lets the widget-level tests reuse the same instance.
+    """
+    app = QApplication.instance() or QApplication([])
     yield app
 
 
