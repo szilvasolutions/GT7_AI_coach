@@ -192,6 +192,9 @@ class MainWindow(QMainWindow):
         self._process_started_at: float | None = None
         self._recent_stderr: collections.deque[str] = collections.deque(maxlen=20)
         self._runner.stderr_line.connect(self._recent_stderr.append)
+        # Tracks whether the most recent exit was triggered by a Stop click
+        # (so we don't pop a "crashed" dialog when the user asked for it).
+        self._stop_requested: bool = False
 
     # ---- handlers ---------------------------------------------------------
 
@@ -263,7 +266,22 @@ class MainWindow(QMainWindow):
     def _on_stop(self) -> None:
         if not self._runner.is_running():
             return
+        self._stop_requested = True
+        log.info("Stop button clicked — graceful stop requested")
         self._runner.stop()
+        self.statusBar().showMessage("Stopping… (will force-quit if not gone in 3 s)")
+        # On Windows, QProcess.terminate() sends WM_CLOSE which a console
+        # subprocess ignores. Schedule a forced kill if the graceful stop
+        # hasn't taken effect within 3 seconds — the operator clicked Stop
+        # because they want it gone NOW.
+        from PySide6.QtCore import QTimer
+
+        QTimer.singleShot(3000, self._stop_force_kill_if_alive)
+
+    def _stop_force_kill_if_alive(self) -> None:
+        if self._runner.is_running():
+            log.warning("Stop: subprocess still alive after 3 s grace — force killing")
+            self._runner.stop()  # second call escalates to kill() in CoachRunner.stop()
 
     def _on_runner_state(self, state: str) -> None:
         self.statusBar().showMessage(f"Runner: {state}")
@@ -295,6 +313,8 @@ class MainWindow(QMainWindow):
             else None
         )
         self._process_started_at = None
+        was_user_stop = self._stop_requested
+        self._stop_requested = False
 
         if exit_code == 0:
             self.statusBar().showMessage("Stopped cleanly.")
@@ -303,11 +323,35 @@ class MainWindow(QMainWindow):
         else:
             self.statusBar().showMessage(f"Subprocess exited with code {exit_code}.")
 
+        # Detect the most common "first launch" failure: PS5 not on / GT7
+        # not running. The subprocess takes ~6 s to give up (3 s broadcast +
+        # 3 s subnet scan) so the 5 s immediate-crash window misses it.
+        # Scan the captured stderr for the specific error string.
+        joined_stderr = "\n".join(self._recent_stderr)
+        if "PS5 not discovered" in joined_stderr and not was_user_stop:
+            QMessageBox.warning(
+                self,
+                "Can't find your PS5",
+                "Couldn't reach your PS5 on the LAN.\n\n"
+                "Most likely cause: Gran Turismo 7 isn't running yet.\n"
+                "Telemetry only flows when GT7 is in a race / time trial.\n\n"
+                "Steps:\n"
+                "  1. Turn the PS5 on (same network as this laptop).\n"
+                "  2. Start GT7 and enter a race or time trial.\n"
+                "  3. Come back here and click Start again.",
+            )
+            return
+
         # Immediate-crash detector. If the subprocess actually reached
         # Running but died within 5 s with a non-zero code, the user
         # almost certainly didn't see anything useful — pop up the last
         # ~20 stderr lines so the actual exception is right in their face.
-        if exit_code not in (0, 130) and ran_for is not None and ran_for < 5.0:
+        if (
+            exit_code not in (0, 130)
+            and not was_user_stop
+            and ran_for is not None
+            and ran_for < 5.0
+        ):
             tail = "\n".join(self._recent_stderr) or "(no stderr captured)"
             QMessageBox.warning(
                 self,

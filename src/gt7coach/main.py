@@ -558,10 +558,12 @@ def main(argv: list[str] | None = None) -> int:
             session.close()
 
     want_summary = args.summary or (cfg.session.generate_summary and not args.no_summary)
-    if shutdown_state["count"] > 0:
-        # User asked to quit — skip the LLM summary call entirely, so Ctrl+C
-        # returns the prompt promptly instead of blocking on a Gemini retry.
-        log.info("skipping post-session summary (shutdown requested)")
+    # Generate the summary on a graceful stop (one Ctrl+C / one Stop click)
+    # but skip it on a force-quit (two Ctrl+C / two Stop clicks). The second
+    # SIGINT path hits os._exit(130) and never gets here anyway; this is a
+    # safety net in case the count was bumped elsewhere.
+    if shutdown_state["count"] >= 2:
+        log.info("skipping post-session summary (force-quit requested)")
     elif want_summary and session is not None:
         try:
             summary = summarise(
