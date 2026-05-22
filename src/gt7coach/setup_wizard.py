@@ -227,6 +227,10 @@ def _step_api_key(provider: str) -> tuple[str, str]:
     info = _provider_by_name(provider)
     assert info is not None
     _section(f"Step 3/6: {provider.title()} API key")
+    print("  Your API key is private. It is stored only on this PC in .env and")
+    print(f"  sent only to {provider}'s official endpoint. Don't share it —")
+    print("  anyone with the key can spend your quota / charge your account.")
+    print()
     existing = os.environ.get(info.env_var)
     if existing:
         masked = existing[:6] + "…" + existing[-4:] if len(existing) > 12 else "(short key)"
