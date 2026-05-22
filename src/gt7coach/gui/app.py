@@ -334,6 +334,10 @@ class MainWindow(QMainWindow):
             QDesktopServices.openUrl(QUrl.fromLocalFile(path))
 
     def closeEvent(self, event) -> None:
+        log.info(
+            "MainWindow.closeEvent — runner_running=%s",
+            self._runner.is_running(),
+        )
         if self._runner.is_running():
             self._runner.stop()
         self._status_tail.stop()
@@ -472,16 +476,55 @@ def main(argv: list[str] | None = None) -> int:
         app = QApplication(sys.argv)
         app.setApplicationName("GT7 AI Coach")
         app.setOrganizationName("szilvasolutions")
+        app.aboutToQuit.connect(lambda: boot_log.info("aboutToQuit signal received"))
 
         boot_log.debug("constructing MainWindow")
         window = MainWindow()
         boot_log.debug("MainWindow constructed; calling show()")
         window.show()
-        boot_log.info("entering app.exec() — GUI is up")
+
+        # Heartbeat: log every 5 s while the GUI is alive. If the operator
+        # reports "the GUI exited with nothing", the heartbeats tell us
+        # how long the process actually lived and roughly where the death
+        # happened.
+        from PySide6.QtCore import QTimer
+
+        heartbeat_count = {"n": 0}
+
+        def _heartbeat() -> None:
+            heartbeat_count["n"] += 1
+            try:
+                visible = window.isVisible()
+                geo = window.geometry()
+                geo_str = f"{geo.width()}x{geo.height()}+{geo.x()},{geo.y()}"
+            except Exception:
+                visible = "?"
+                geo_str = "?"
+            boot_log.info(
+                "heartbeat #%d (window visible=%s geom=%s)",
+                heartbeat_count["n"],
+                visible,
+                geo_str,
+            )
+
+        hb_timer = QTimer()
+        hb_timer.timeout.connect(_heartbeat)
+        hb_timer.start(5000)
+
+        boot_log.info(
+            "entering app.exec() — window visible=%s, isMinimized=%s, geom=%dx%d+%d,%d",
+            window.isVisible(),
+            window.isMinimized(),
+            window.geometry().width(),
+            window.geometry().height(),
+            window.geometry().x(),
+            window.geometry().y(),
+        )
         rc = app.exec()
         boot_log.info("app.exec() returned %d — exiting cleanly", rc)
         return rc
-    except SystemExit:
+    except SystemExit as exc:
+        boot_log.warning("SystemExit raised during GUI lifecycle: code=%r", exc.code)
         raise
     except BaseException:
         boot_log.exception("fatal: GUI crashed before/inside app.exec()")
