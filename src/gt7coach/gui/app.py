@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import collections
 import logging
+import os
 import sys
 import time
 from pathlib import Path
@@ -339,24 +340,152 @@ class MainWindow(QMainWindow):
         super().closeEvent(event)
 
 
+def _gui_log_path() -> Path:
+    """Return ~/.gt7coach/gui.log (or %LOCALAPPDATA%/gt7coach/gui.log on Windows).
+
+    Picked so the file survives even when the GUI dies before MainWindow is
+    drawn — i.e. before any session/run_<ts>/debug.log can exist. The user
+    can hand this file over and we see everything from import time through
+    crash.
+    """
+    if sys.platform == "win32":
+        base = os.environ.get("LOCALAPPDATA") or str(Path.home())
+        return Path(base) / "gt7coach" / "gui.log"
+    return Path.home() / ".gt7coach" / "gui.log"
+
+
+def _init_gui_logging(verbose: bool) -> Path:
+    """Configure root logging to write everything to gui.log and stderr.
+
+    Runs as the very first thing in main() so we capture failures during
+    QApplication construction or MainWindow.__init__ — both of which were
+    previously invisible when the GUI died at launch.
+
+    Returns the resolved path of the log file so we can print it.
+    """
+    log_path = _gui_log_path()
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    root = logging.getLogger()
+    root.setLevel(logging.DEBUG)
+    for h in list(root.handlers):
+        root.removeHandler(h)
+
+    fmt = logging.Formatter(
+        "%(asctime)s.%(msecs)03d %(levelname)s %(threadName)s %(name)s: %(message)s",
+        datefmt="%H:%M:%S",
+    )
+
+    # File handler — always DEBUG, always on, opened in append mode so a
+    # restart-after-crash sequence stays in one file the user can paste.
+    fh = logging.FileHandler(log_path, mode="a", encoding="utf-8")
+    fh.setLevel(logging.DEBUG)
+    fh.setFormatter(fmt)
+    root.addHandler(fh)
+
+    # Stderr handler — INFO by default, DEBUG with -v.
+    sh = logging.StreamHandler(stream=sys.stderr)
+    sh.setLevel(logging.DEBUG if verbose else logging.INFO)
+    sh.setFormatter(fmt)
+    root.addHandler(sh)
+
+    # Filter out noisy third-party loggers from the console (they still go
+    # to the file). Same prefix set the receive-loop code uses.
+    noisy = ("comtypes", "httpx", "httpcore", "google_genai", "urllib3", "asyncio")
+
+    class _Noise(logging.Filter):
+        def filter(self, record: logging.LogRecord) -> bool:
+            return not record.name.startswith(noisy)
+
+    sh.addFilter(_Noise())
+
+    # Capture ANY uncaught exception in the GUI process to the log file
+    # before the process dies. Previously these went to a stderr the user
+    # couldn't see (the PowerShell scrollback was too short / the window
+    # closed too fast).
+    def _excepthook(exc_type, exc_value, exc_tb):
+        logging.getLogger("gt7coach.gui").critical(
+            "uncaught exception", exc_info=(exc_type, exc_value, exc_tb)
+        )
+        # Still let Python's default behaviour run too.
+        sys.__excepthook__(exc_type, exc_value, exc_tb)
+
+    sys.excepthook = _excepthook
+
+    # Capture Qt-side warnings + errors. Qt writes these to stderr by
+    # default, which the user can't see when the console scrolls past.
+    try:
+        from PySide6.QtCore import QtMsgType, qInstallMessageHandler
+
+        def _qt_msg(mode, _ctx, msg):
+            level = {
+                QtMsgType.QtDebugMsg: logging.DEBUG,
+                QtMsgType.QtInfoMsg: logging.INFO,
+                QtMsgType.QtWarningMsg: logging.WARNING,
+                QtMsgType.QtCriticalMsg: logging.ERROR,
+                QtMsgType.QtFatalMsg: logging.CRITICAL,
+            }.get(mode, logging.INFO)
+            logging.getLogger("Qt").log(level, "%s", msg)
+
+        qInstallMessageHandler(_qt_msg)
+    except Exception:  # pragma: no cover — defensive
+        pass
+
+    return log_path
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="gt7coach-gui", description="GT7 AI Coach GUI")
     p.add_argument("-v", "--verbose", action="store_true")
     args = p.parse_args(argv)
 
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-        stream=sys.stderr,
-    )
+    log_path = _init_gui_logging(args.verbose)
+    boot_log = logging.getLogger("gt7coach.gui.boot")
 
-    app = QApplication(sys.argv)
-    app.setApplicationName("GT7 AI Coach")
-    app.setOrganizationName("szilvasolutions")
+    # Print the log path to the operator's terminal up front so they can
+    # find it even if the GUI dies in the next millisecond.
+    print(f"[gt7coach-gui] writing detailed log to: {log_path}", file=sys.stderr)
+    boot_log.info("=" * 70)
+    boot_log.info("gt7coach-gui starting")
+    try:
+        import platform as _platform
 
-    window = MainWindow()
-    window.show()
-    return app.exec()
+        from PySide6 import __version__ as pyside_version
+
+        from gt7coach import __version__ as gt7_version
+
+        boot_log.info(
+            "versions: gt7coach=%s python=%s PySide6=%s platform=%s",
+            gt7_version,
+            _platform.python_version(),
+            pyside_version,
+            _platform.platform(),
+        )
+    except Exception:
+        boot_log.exception("could not log version info")
+    boot_log.info("cwd=%s", Path.cwd())
+    boot_log.info("sys.executable=%s", sys.executable)
+    boot_log.info("argv=%r", argv if argv is not None else sys.argv)
+
+    try:
+        boot_log.debug("constructing QApplication")
+        app = QApplication(sys.argv)
+        app.setApplicationName("GT7 AI Coach")
+        app.setOrganizationName("szilvasolutions")
+
+        boot_log.debug("constructing MainWindow")
+        window = MainWindow()
+        boot_log.debug("MainWindow constructed; calling show()")
+        window.show()
+        boot_log.info("entering app.exec() — GUI is up")
+        rc = app.exec()
+        boot_log.info("app.exec() returned %d — exiting cleanly", rc)
+        return rc
+    except SystemExit:
+        raise
+    except BaseException:
+        boot_log.exception("fatal: GUI crashed before/inside app.exec()")
+        raise
 
 
 if __name__ == "__main__":
