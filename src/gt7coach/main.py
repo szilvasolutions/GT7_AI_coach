@@ -483,7 +483,7 @@ def main(argv: list[str] | None = None) -> int:
                 tr = track_detector.feed(packet)
                 if tr is not None:
                     advisor.set_track_shape(tr.shape_description)
-                    status.emit("track", id=tr.id, name=tr.name)
+                    status.emit("track", id=tr.id, name=tr.display_name)
             else:
                 track_detector.feed(packet)  # keeps the sticky-release timer fresh
             lap_tracker.feed_packet(packet)

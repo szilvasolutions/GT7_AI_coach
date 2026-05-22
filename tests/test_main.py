@@ -103,3 +103,24 @@ def test_stream_replay_literal_path_unchanged(tmp_path: Path) -> None:
     args.realtime = False
     stream, _ = _stream_replay(args)
     assert len(list(stream)) == 24
+
+
+# ---- status event hooks use the right Track attributes --------------------
+
+
+def test_track_object_has_attributes_status_emit_uses() -> None:
+    """Regression for AttributeError: 'Track' object has no attribute 'name'.
+
+    main.py calls ``status.emit('track', id=tr.id, name=tr.display_name)``
+    immediately after track_detector.feed() returns a Track. If the Track
+    dataclass field is renamed and main.py isn't updated, the receive loop
+    crashes mid-race. This test pins the contract.
+    """
+    from dataclasses import fields
+
+    from gt7coach.tracks.database import Track
+
+    field_names = {f.name for f in fields(Track)}
+    # main.py:486 -> status.emit("track", id=tr.id, name=tr.display_name)
+    assert "id" in field_names
+    assert "display_name" in field_names
