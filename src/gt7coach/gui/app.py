@@ -206,14 +206,41 @@ class MainWindow(QMainWindow):
         )
 
     def _on_start(self) -> None:
+        """Wrap the entire Start handler in an exception logger because
+        PySide6 swallows uncaught slot exceptions silently (they reach
+        sys.unraisablehook, not sys.excepthook). Without this wrapper a
+        plain AttributeError anywhere in the body looks like nothing
+        happened."""
         log.info("=== Start button clicked ===")
+        try:
+            self._do_start()
+        except BaseException:
+            log.exception("Start: handler crashed with an exception")
+            try:
+                QMessageBox.critical(
+                    self,
+                    "Start failed",
+                    "An exception was raised inside the Start handler.\n"
+                    "Open gui.log for the full traceback:\n"
+                    f"  {_gui_log_path()}",
+                )
+            except Exception:
+                pass
+
+    def _do_start(self) -> None:
+        log.debug("Start: checking is_running")
         if self._runner.is_running():
             log.info("Start: runner already running, ignoring click")
             return
+        log.debug("Start: clearing live log")
         self._live_log.clear_log()
+        log.debug("Start: resetting status panel")
         self._status_panel.reset()
+        log.debug("Start: resetting lap table")
         self._lap_table.reset()
+        log.debug("Start: resetting advice history")
         self._advice_history.reset()
+        log.debug("Start: building options")
         opts = self._build_options()
         log.info(
             "Start: built options provider=%r voice=%r voice_rate=%d style=%r car_class=%r",
@@ -224,12 +251,7 @@ class MainWindow(QMainWindow):
             opts.car_class,
         )
         log.info("Start: calling runner.start(opts)")
-        try:
-            self._runner.start(opts)
-        except Exception as exc:
-            log.exception("Start: runner.start() raised")
-            QMessageBox.critical(self, "Failed to start", str(exc))
-            return
+        self._runner.start(opts)
         log.info("Start: runner.start() returned (subprocess spawn requested)")
         # Begin tailing the status file the runner just allocated.
         if self._runner.status_file is not None:
@@ -431,6 +453,21 @@ def _init_gui_logging(verbose: bool) -> Path:
         sys.__excepthook__(exc_type, exc_value, exc_tb)
 
     sys.excepthook = _excepthook
+
+    # Exceptions raised inside PySide6 slots do NOT trigger sys.excepthook —
+    # they go through sys.unraisablehook (CPython >= 3.8). Without this,
+    # a TypeError or AttributeError inside e.g. _on_start vanishes into
+    # the void: the slot returns, the GUI stays running, and the operator
+    # has no clue why their click did nothing.
+    def _unraisablehook(unraisable):
+        logging.getLogger("gt7coach.gui").critical(
+            "unraisable exception in slot: %s",
+            unraisable.err_msg or "(no message)",
+            exc_info=(unraisable.exc_type, unraisable.exc_value, unraisable.exc_traceback),
+        )
+        sys.__unraisablehook__(unraisable)
+
+    sys.unraisablehook = _unraisablehook
 
     # Capture Qt-side warnings + errors. Qt writes these to stderr by
     # default, which the user can't see when the console scrolls past.
