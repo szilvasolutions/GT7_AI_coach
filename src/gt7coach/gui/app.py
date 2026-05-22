@@ -39,10 +39,12 @@ from PySide6.QtWidgets import (
 from gt7coach.gui.config_panel import ConfigDialog
 from gt7coach.gui.log_tail import StatusEvent, StatusTail
 from gt7coach.gui.runner import CoachOptions, CoachRunner
+from gt7coach.gui.updater import UpdateChecker, UpdateInfo
 from gt7coach.gui.widgets.advice_history import AdviceHistory
 from gt7coach.gui.widgets.lap_table import LapTable
 from gt7coach.gui.widgets.live_log import LiveLog
 from gt7coach.gui.widgets.status_panel import StatusPanel
+from gt7coach.gui.widgets.update_banner import UpdateBanner
 
 log = logging.getLogger("gt7coach.gui")
 
@@ -127,9 +129,14 @@ class MainWindow(QMainWindow):
         splitter.setStretchFactor(1, 1)
         splitter.setSizes([400, 700])
 
+        # Update banner — hidden until UpdateChecker fires.
+        self._update_banner = UpdateBanner()
+        self._update_banner.download_clicked.connect(self._on_download_update)
+
         central = QWidget()
         layout = QVBoxLayout(central)
         layout.setContentsMargins(8, 8, 8, 8)
+        layout.addWidget(self._update_banner)
         layout.addWidget(splitter)
         self.setCentralWidget(central)
 
@@ -155,6 +162,17 @@ class MainWindow(QMainWindow):
         voice_test_action = QAction("Test voice", self)
         voice_test_action.triggered.connect(self._on_voice_test)
         tools_menu.addAction(voice_test_action)
+        tools_menu.addSeparator()
+        check_updates_action = QAction("Check for updates", self)
+        check_updates_action.triggered.connect(lambda: self._update_checker.check(force=True))
+        tools_menu.addAction(check_updates_action)
+
+        # --- Update checker ----------------------------------------------
+        self._update_checker = UpdateChecker(self)
+        self._update_checker.update_available.connect(self._update_banner.show_for)
+        # Kick off a cached / lightweight check at startup. Force=False so
+        # we don't hit the GitHub API more than once every 6 hours.
+        self._update_checker.check(force=False)
 
         # --- Wire signals -------------------------------------------------
         self._runner.stderr_line.connect(self._live_log.append_line)
@@ -220,6 +238,18 @@ class MainWindow(QMainWindow):
     def _open_config_dialog(self) -> None:
         dlg = ConfigDialog(self)
         dlg.exec()
+
+    def _on_download_update(self, info: UpdateInfo) -> None:
+        """Hook for Phase D's self-updater. For now (pre-Phase-D) we
+        show a message explaining the user has to download manually."""
+        QMessageBox.information(
+            self,
+            "Update available",
+            f"Release {info.tag} is ready.\n\n"
+            "Self-updating from the GUI lands in the next release. "
+            "Click 'View release' to download and replace the install "
+            "folder manually.",
+        )
 
     def _on_voice_test(self) -> None:
         """Speak a test phrase in-process using the toolbar's current
