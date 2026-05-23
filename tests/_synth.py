@@ -25,6 +25,14 @@ def make_packet(
     pos: tuple[float, float, float] = (0.0, 0.0, 0.0),
     lap_count: int = 1,
     lap_time_ms: int = -1,
+    best_lap_ms: int = -1,
+    fuel_level: float = 50.0,
+    fuel_capacity: float = 100.0,
+    oil_temp: float = 95.0,
+    water_temp: float = 85.0,
+    rev_light_min: int = 7500,
+    rev_light_max: int = 8500,
+    time_of_day_ms: int = 12 * 3600 * 1000,
     flags: int = 0,
 ) -> Packet:
     """Construct a fully-populated Packet with sensible defaults.
@@ -57,6 +65,14 @@ def make_packet(
         pos_z=pos[2],
         lap_count=lap_count,
         lap_time_ms=lap_time_ms,
+        best_lap_ms=best_lap_ms,
+        fuel_level=fuel_level,
+        fuel_capacity=fuel_capacity,
+        oil_temp=oil_temp,
+        water_temp=water_temp,
+        rev_light_min=rev_light_min,
+        rev_light_max=rev_light_max,
+        time_of_day_ms=time_of_day_ms,
         flags=flags,
     )
 

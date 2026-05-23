@@ -310,3 +310,48 @@ def test_lap_tracker_ignores_first_lap_transition_with_no_time() -> None:
     )
     assert spoken is None
     assert voice.spoken == []
+
+
+# ---- lap announce modes (Phase E) ------------------------------------------
+
+
+def _run_lap_transition(announce_mode: str, *, llm_response: str = "Solid corner work.") -> tuple:
+    """Helper: drive a single lap transition through LapTracker in a mode.
+    Returns (provider_call_count, voice_spoken_lines)."""
+    calls = []
+
+    def responder(_s, _u):
+        calls.append(1)
+        return llm_response
+
+    provider = MockProvider(responder=responder)
+    voice = NullVoiceEngine()
+    tracker = LapTracker(
+        provider=provider, voice=voice, driver_style="smooth", announce_mode=announce_mode
+    )
+    tracker.feed_packet(make_packet(packet_id=1, recv_time=0.0, lap_count=1, lap_time_ms=-1))
+    tracker.feed_packet(make_packet(packet_id=100, recv_time=90.0, lap_count=2, lap_time_ms=82000))
+    return len(calls), list(voice.spoken)
+
+
+def test_lap_announce_mode_best_lap_skips_llm() -> None:
+    """best_lap mode must not call the LLM — critical for free-tier quota."""
+    call_count, spoken = _run_lap_transition("best_lap")
+    assert call_count == 0
+    assert len(spoken) == 1
+    assert "1:22.000" in spoken[0]
+
+
+def test_lap_announce_mode_recommendation_calls_llm_only() -> None:
+    call_count, spoken = _run_lap_transition("recommendation")
+    assert call_count == 1
+    assert spoken == ["Solid corner work."]
+
+
+def test_lap_announce_mode_both_speaks_callout_then_summary() -> None:
+    call_count, spoken = _run_lap_transition("both")
+    assert call_count == 1
+    assert len(spoken) == 2
+    # First line is the short PB / delta callout; second is the LLM summary.
+    assert "1:22.000" in spoken[0]
+    assert spoken[1] == "Solid corner work."

@@ -145,6 +145,16 @@ class Packet:
     # Lap data
     lap_count: int
     lap_time_ms: int  # last_laptime (-1 if not set)
+    best_lap_ms: int  # -1 if unset
+
+    # Fuel + engine (VR-alert telemetry)
+    fuel_level: float  # litres
+    fuel_capacity: float  # litres
+    oil_temp: float  # °C
+    water_temp: float  # °C
+    rev_light_min: int  # RPM at which the shift LED first lights
+    rev_light_max: int  # RPM at the hard limiter
+    time_of_day_ms: int  # ms since midnight, in-game
 
     # Misc (preserved so detectors don't need to re-parse)
     flags: int
@@ -208,6 +218,14 @@ def parse_packet(buf: bytes, recv_time: float | None = None) -> Packet:
         pos_z=_f32(buf, _OFF_POS_Z),
         lap_count=_S16.unpack_from(buf, _OFF_CURRENT_LAP)[0],
         lap_time_ms=_S32.unpack_from(buf, _OFF_LAST_LAPTIME_MS)[0],
+        best_lap_ms=_S32.unpack_from(buf, _OFF_BEST_LAPTIME_MS)[0],
+        fuel_level=_f32(buf, _OFF_FUEL_LEVEL),
+        fuel_capacity=_f32(buf, _OFF_FUEL_CAPACITY),
+        oil_temp=_f32(buf, _OFF_OIL_TEMP),
+        water_temp=_f32(buf, _OFF_WATER_TEMP),
+        rev_light_min=_U16.unpack_from(buf, _OFF_REV_LIGHT_MIN)[0],
+        rev_light_max=_U16.unpack_from(buf, _OFF_REV_LIGHT_MAX)[0],
+        time_of_day_ms=_U32.unpack_from(buf, _OFF_TIME_OF_DAY)[0],
         flags=_U16.unpack_from(buf, _OFF_FLAGS)[0],
     )
 
@@ -229,6 +247,14 @@ def build_synthetic_packet(
     pos: tuple[float, float, float] = (10.0, 0.5, -20.0),
     lap_count: int = 1,
     lap_time_ms: int = 92500,
+    best_lap_ms: int = -1,
+    fuel_level: float = 50.0,
+    fuel_capacity: float = 100.0,
+    oil_temp: float = 95.0,
+    water_temp: float = 85.0,
+    rev_light_min: int = 7500,
+    rev_light_max: int = 8500,
+    time_of_day_ms: int = 12 * 3600 * 1000,
     flags: int = 0,
     fmt: str = "B",
     iv_seed_bytes: bytes = b"\x00\x00\x00\x00",
@@ -257,6 +283,14 @@ def build_synthetic_packet(
     _U32.pack_into(buf, _OFF_PACKET_ID, packet_id)
     _S16.pack_into(buf, _OFF_CURRENT_LAP, lap_count)
     _S32.pack_into(buf, _OFF_LAST_LAPTIME_MS, lap_time_ms)
+    _S32.pack_into(buf, _OFF_BEST_LAPTIME_MS, best_lap_ms)
+    _F32.pack_into(buf, _OFF_FUEL_LEVEL, fuel_level)
+    _F32.pack_into(buf, _OFF_FUEL_CAPACITY, fuel_capacity)
+    _F32.pack_into(buf, _OFF_OIL_TEMP, oil_temp)
+    _F32.pack_into(buf, _OFF_WATER_TEMP, water_temp)
+    _U16.pack_into(buf, _OFF_REV_LIGHT_MIN, rev_light_min)
+    _U16.pack_into(buf, _OFF_REV_LIGHT_MAX, rev_light_max)
+    _U32.pack_into(buf, _OFF_TIME_OF_DAY, time_of_day_ms)
     _U16.pack_into(buf, _OFF_FLAGS, flags)
     buf[_OFF_GEAR_PACKED] = gear & 0x0F
     buf[_OFF_THROTTLE] = throttle

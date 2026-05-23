@@ -376,6 +376,36 @@ class Advisor:
         self.history.append(stub)
         return stub
 
+    def on_vr_alert(self, event: Event, *, now: float | None = None) -> str | None:
+        """Speak a VR voice-HUD alert. Deterministic — never calls the LLM.
+
+        Returns the spoken phrase, or ``None`` if the alert was rate-limited
+        or the event type has no phrase template. VR alerts use
+        ``voice.speak()`` (not ``voice.interrupt()``) so they queue behind
+        any in-flight corner advice rather than cutting it off.
+        """
+        from gt7coach.detectors.vr_alerts import format_vr_phrase
+
+        phrase = format_vr_phrase(event)
+        if phrase is None:
+            return None
+        if not self.rate_limiter.allow(event.type, now=now):
+            return None
+        self.voice.speak(phrase)
+        self._recent_advice.append((event.type, phrase))
+        try:
+            from gt7coach import status as _status
+
+            _status.emit(
+                "advice",
+                advice=phrase,
+                event_type=event.type,
+                severity=event.severity,
+            )
+        except Exception:  # pragma: no cover
+            pass
+        return phrase
+
     def on_incident(self, incident: Incident) -> IncidentResult:
         """Speak a sarcastic remark for a spin / crash. Synchronous on purpose."""
         user_prompt = f"The driver just had a {incident.type}. Roast it in one short line."

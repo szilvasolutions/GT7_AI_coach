@@ -49,3 +49,24 @@ session:
   log_dir: ./sessions
   rotation_mb: 10
   generate_summary: true
+  # End-of-lap voice mode. 'recommendation' = LLM-generated summary (current
+  # behaviour); 'best_lap' = short PB / delta callout only, no LLM call
+  # (free-tier-friendly); 'both' = callout then summary.
+  lap_announce_mode: both
+
+# VR voice-HUD alerts: spoken callouts replacing the unreadable in-headset
+# digital HUD. Each alert can be toggled independently; all alerts share the
+# global coach.global_rate_limit_seconds cooldown.
+vr_alerts:
+  tyre_temp_enabled: true
+  tyre_temp_hot_c: 110.0
+  tyre_temp_cold_c: 60.0
+  fuel_enabled: true
+  fuel_low_laps_remaining: 3.0       # warn when fewer than N laps of fuel left
+  fuel_critical_laps_remaining: 1.5
+  coolant_enabled: true
+  oil_hot_c: 130.0
+  water_hot_c: 110.0
+  shift_assist_enabled: false        # chatty — opt-in only
+  self_delta_enabled: true
+  self_delta_threshold_ms: 300       # only speak if |delta| > 0.3s

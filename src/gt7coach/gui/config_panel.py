@@ -39,6 +39,11 @@ log = logging.getLogger(__name__)
 _PROVIDER_CHOICES = ["gemini", "anthropic", "openai", "ollama", "mock"]
 _VOICE_CHOICES = ["pyttsx3", "piper", "null"]
 _DRIVER_STYLE_CHOICES = ["smooth", "aggressive", "learning"]
+_LAP_ANNOUNCE_CHOICES = [
+    ("both", "Both: best-lap callout + AI recommendation"),
+    ("recommendation", "AI recommendation only"),
+    ("best_lap", "Best lap only (no AI, no quota burn)"),
+]
 
 # Maps provider name → env var that the provider's SDK / our auto-picker
 # looks for. ollama / mock need no key, so they're absent.
@@ -109,7 +114,7 @@ class ConfigDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("GT7 AI Coach — Configuration")
         self.setModal(True)
-        self.resize(540, 500)
+        self.resize(560, 680)
         self._path = path or Path.cwd() / "config.yaml"
         self._env_path = self._path.with_name(".env")
 
@@ -165,6 +170,32 @@ class ConfigDialog(QDialog):
         self._log_dir = QLineEdit(self._cfg.session.log_dir)
         self._generate_summary = QCheckBox("Generate end-of-session summary")
         self._generate_summary.setChecked(self._cfg.session.generate_summary)
+        self._lap_announce_mode = QComboBox()
+        for key, label in _LAP_ANNOUNCE_CHOICES:
+            self._lap_announce_mode.addItem(label, userData=key)
+        # Select the row whose userData matches the current config value.
+        for i in range(self._lap_announce_mode.count()):
+            if self._lap_announce_mode.itemData(i) == self._cfg.session.lap_announce_mode:
+                self._lap_announce_mode.setCurrentIndex(i)
+                break
+
+        # VR voice-HUD alerts — one checkbox per alert. These mirror
+        # cfg.vr_alerts.*_enabled and apply on the next Start.
+        vr = self._cfg.vr_alerts
+        self._vr_tyre = QCheckBox(
+            f"Tire temperature  (warn outside {int(vr.tyre_temp_cold_c)}-{int(vr.tyre_temp_hot_c)} °C)"
+        )
+        self._vr_tyre.setChecked(vr.tyre_temp_enabled)
+        self._vr_fuel = QCheckBox("Low fuel + laps-remaining")
+        self._vr_fuel.setChecked(vr.fuel_enabled)
+        self._vr_coolant = QCheckBox(
+            f"Oil / water overheat  (>{int(vr.oil_hot_c)} / {int(vr.water_hot_c)} °C)"
+        )
+        self._vr_coolant.setChecked(vr.coolant_enabled)
+        self._vr_shift = QCheckBox("Shift-up beep (chatty)")
+        self._vr_shift.setChecked(vr.shift_assist_enabled)
+        self._vr_self_delta = QCheckBox("Self-delta vs personal best (each lap)")
+        self._vr_self_delta.setChecked(vr.self_delta_enabled)
 
         # --- layout -------------------------------------------------------
         form = QFormLayout()
@@ -203,6 +234,13 @@ class ConfigDialog(QDialog):
         form.addRow(QLabel("<b>Session</b>"))
         form.addRow("Log directory:", self._log_dir)
         form.addRow("", self._generate_summary)
+        form.addRow("End-of-lap announce:", self._lap_announce_mode)
+        form.addRow(QLabel("<b>VR Alerts</b>  (selectable voice-HUD callouts)"))
+        form.addRow("", self._vr_tyre)
+        form.addRow("", self._vr_fuel)
+        form.addRow("", self._vr_coolant)
+        form.addRow("", self._vr_shift)
+        form.addRow("", self._vr_self_delta)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
@@ -257,6 +295,14 @@ class ConfigDialog(QDialog):
         cfg.voice.speed = int(self._voice_speed.value())
         cfg.session.log_dir = self._log_dir.text().strip() or "./sessions"
         cfg.session.generate_summary = bool(self._generate_summary.isChecked())
+        mode_data = self._lap_announce_mode.currentData()
+        if mode_data:
+            cfg.session.lap_announce_mode = str(mode_data)
+        cfg.vr_alerts.tyre_temp_enabled = bool(self._vr_tyre.isChecked())
+        cfg.vr_alerts.fuel_enabled = bool(self._vr_fuel.isChecked())
+        cfg.vr_alerts.coolant_enabled = bool(self._vr_coolant.isChecked())
+        cfg.vr_alerts.shift_assist_enabled = bool(self._vr_shift.isChecked())
+        cfg.vr_alerts.self_delta_enabled = bool(self._vr_self_delta.isChecked())
 
         try:
             save(cfg, self._path)

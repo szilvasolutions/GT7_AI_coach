@@ -54,6 +54,36 @@ class SessionSettings:
     log_dir: str = "./sessions"
     rotation_mb: int = 10  # currently informational
     generate_summary: bool = True
+    # End-of-lap voice mode. "recommendation" = current behaviour (LLM
+    # summary), "best_lap" = short PB callout only (no LLM call, free-
+    # tier-friendly), "both" = PB callout then LLM summary.
+    lap_announce_mode: str = "both"
+
+
+@dataclass(slots=True)
+class VRAlertsConfig:
+    """Per-alert toggles + thresholds for the VR voice-HUD layer.
+
+    All alerts go through the existing rate limiter, so the global
+    cooldown still applies on top of these settings.
+    """
+
+    tyre_temp_enabled: bool = True
+    tyre_temp_hot_c: float = 110.0
+    tyre_temp_cold_c: float = 60.0
+
+    fuel_enabled: bool = True
+    fuel_low_laps_remaining: float = 3.0
+    fuel_critical_laps_remaining: float = 1.5
+
+    coolant_enabled: bool = True
+    oil_hot_c: float = 130.0
+    water_hot_c: float = 110.0
+
+    shift_assist_enabled: bool = False  # chatty — opt-in only
+
+    self_delta_enabled: bool = True
+    self_delta_threshold_ms: int = 300  # only speak if |delta| > 0.3s
 
 
 @dataclass(slots=True)
@@ -66,6 +96,7 @@ class LoadedConfig:
     rate_limiter: RateLimiterConfig
     voice: VoiceSettings
     session: SessionSettings
+    vr_alerts: VRAlertsConfig
     detectors_enabled: set[str]
     detector_configs: dict[str, Any]
     coach_provider: str
@@ -86,6 +117,8 @@ _DEFAULT_ENABLED = {
     "line.late_apex",
     "braking.trail_off_too_fast",
 }
+# VR voice-HUD alerts are toggled via cfg.vr_alerts.*_enabled, not via
+# detectors_enabled — the VRAlertDetector handles all sub-alerts internally.
 
 
 def default_config() -> LoadedConfig:
@@ -96,6 +129,7 @@ def default_config() -> LoadedConfig:
         rate_limiter=RateLimiterConfig(),
         voice=VoiceSettings(),
         session=SessionSettings(),
+        vr_alerts=VRAlertsConfig(),
         detectors_enabled=set(_DEFAULT_ENABLED),
         detector_configs={
             "braking.late_brake": LateBrakeConfig(),
@@ -150,6 +184,21 @@ def save(cfg: LoadedConfig, path: str | Path) -> None:
         "session": {
             "log_dir": str(cfg.session.log_dir),
             "generate_summary": bool(cfg.session.generate_summary),
+            "lap_announce_mode": str(cfg.session.lap_announce_mode),
+        },
+        "vr_alerts": {
+            "tyre_temp_enabled": bool(cfg.vr_alerts.tyre_temp_enabled),
+            "tyre_temp_hot_c": float(cfg.vr_alerts.tyre_temp_hot_c),
+            "tyre_temp_cold_c": float(cfg.vr_alerts.tyre_temp_cold_c),
+            "fuel_enabled": bool(cfg.vr_alerts.fuel_enabled),
+            "fuel_low_laps_remaining": float(cfg.vr_alerts.fuel_low_laps_remaining),
+            "fuel_critical_laps_remaining": float(cfg.vr_alerts.fuel_critical_laps_remaining),
+            "coolant_enabled": bool(cfg.vr_alerts.coolant_enabled),
+            "oil_hot_c": float(cfg.vr_alerts.oil_hot_c),
+            "water_hot_c": float(cfg.vr_alerts.water_hot_c),
+            "shift_assist_enabled": bool(cfg.vr_alerts.shift_assist_enabled),
+            "self_delta_enabled": bool(cfg.vr_alerts.self_delta_enabled),
+            "self_delta_threshold_ms": int(cfg.vr_alerts.self_delta_threshold_ms),
         },
     }
     if cfg.coach_model:
@@ -244,5 +293,36 @@ def _merge(cfg: LoadedConfig, raw: dict[str, Any]) -> LoadedConfig:
         cfg.session.rotation_mb = int(session["rotation_mb"])
     if "generate_summary" in session:
         cfg.session.generate_summary = bool(session["generate_summary"])
+    if "lap_announce_mode" in session:
+        mode = str(session["lap_announce_mode"])
+        if mode in ("recommendation", "best_lap", "both"):
+            cfg.session.lap_announce_mode = mode
+        else:
+            log.warning(
+                "invalid lap_announce_mode %r; keeping %r", mode, cfg.session.lap_announce_mode
+            )
+
+    vr = raw.get("vr_alerts") or {}
+    for bool_key in (
+        "tyre_temp_enabled",
+        "fuel_enabled",
+        "coolant_enabled",
+        "shift_assist_enabled",
+        "self_delta_enabled",
+    ):
+        if bool_key in vr:
+            setattr(cfg.vr_alerts, bool_key, bool(vr[bool_key]))
+    for float_key in (
+        "tyre_temp_hot_c",
+        "tyre_temp_cold_c",
+        "fuel_low_laps_remaining",
+        "fuel_critical_laps_remaining",
+        "oil_hot_c",
+        "water_hot_c",
+    ):
+        if float_key in vr:
+            setattr(cfg.vr_alerts, float_key, float(vr[float_key]))
+    if "self_delta_threshold_ms" in vr:
+        cfg.vr_alerts.self_delta_threshold_ms = int(vr["self_delta_threshold_ms"])
 
     return cfg

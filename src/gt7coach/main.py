@@ -39,6 +39,7 @@ from gt7coach.detectors import (
     CornerTrace,
     Event,
     IncidentDetector,
+    VRAlertDetector,
     detect_clean_corner,
     detect_early_lift,
     detect_late_apex,
@@ -458,10 +459,12 @@ def main(argv: list[str] | None = None) -> int:
     seg = CornerSegmenter()
     incident_detector = IncidentDetector()
     track_detector = TrackDetector()
+    vr_alert_detector = VRAlertDetector(cfg=cfg.vr_alerts)
     lap_tracker = LapTracker(
         provider=provider,
         voice=voice,
         driver_style=advisor_cfg.driver_style,
+        announce_mode=cfg.session.lap_announce_mode,
     )
     # CLI / config track override happens once at startup.
     forced_track = args.track or cfg.coach_track
@@ -487,6 +490,18 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 track_detector.feed(packet)  # keeps the sticky-release timer fresh
             lap_tracker.feed_packet(packet)
+            # VR voice-HUD alerts (tire temp, fuel, coolant, shift, self-delta).
+            # Per-packet, deterministic phrases, no LLM call.
+            for vr_event in vr_alert_detector.feed(packet):
+                phrase = advisor.on_vr_alert(vr_event)
+                if phrase is not None:
+                    log.info("vr alert %s: %s", vr_event.type, phrase)
+                    status.emit(
+                        "vr_alert",
+                        alert_type=vr_event.type,
+                        severity=vr_event.severity,
+                        message=phrase,
+                    )
             # Incidents fire on a single packet; check before corner detection
             # so a spin during a corner trace interrupts the planned advice.
             incident = incident_detector.feed(packet)

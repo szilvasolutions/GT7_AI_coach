@@ -33,6 +33,7 @@ from gt7coach.detectors.throttle import (
     detect_sawing,
     detect_wheelspin,
 )
+from gt7coach.detectors.vr_alerts import VRAlertDetector
 
 __all__ = [
     "CleanCornerConfig",
@@ -51,6 +52,7 @@ __all__ = [
     "SawingConfig",
     "TrailOffConfig",
     "UndersteerConfig",
+    "VRAlertDetector",
     "WheelspinConfig",
     "detect_clean_corner",
     "detect_early_lift",

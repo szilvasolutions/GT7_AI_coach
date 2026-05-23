@@ -31,6 +31,22 @@ def _format_lap_time(ms: int) -> str:
     return f"{m}:{s:06.3f}"
 
 
+def _format_best_lap_callout(
+    last_lap_ms: int,
+    best_lap_ms: int,
+    delta_ms: int | None,
+    is_pb: bool,
+) -> str:
+    """Short PB / delta callout used by the 'best_lap' and 'both' modes."""
+    time_str = _format_lap_time(last_lap_ms)
+    if is_pb:
+        return f"New personal best, {time_str}."
+    if delta_ms is None or best_lap_ms <= 0:
+        return time_str + "."
+    delta_s = delta_ms / 1000.0
+    return f"{time_str}, plus {delta_s:.1f}."
+
+
 def _canned_summary(
     last_lap_ms: int,
     best_lap_ms: int,
@@ -93,6 +109,9 @@ class LapTracker:
     voice: VoiceEngine
     driver_style: str = "smooth"
     summary_max_tokens: int = 96
+    # End-of-lap voice mode: "recommendation" (LLM summary, current
+    # behaviour), "best_lap" (short PB callout, no LLM call), or "both".
+    announce_mode: str = "recommendation"
 
     _last_lap_count: int = field(default=-1, init=False)
     _best_lap_ms: int = field(default=-1, init=False)
@@ -136,17 +155,14 @@ class LapTracker:
 
     # ---- internals -------------------------------------------------------
 
-    def _on_lap_complete(self, last_lap_ms: int) -> str:
-        is_pb = last_lap_ms > 0 and (self._best_lap_ms < 0 or last_lap_ms <= self._best_lap_ms)
-        if last_lap_ms > 0 and (self._best_lap_ms < 0 or last_lap_ms < self._best_lap_ms):
-            self._best_lap_ms = last_lap_ms
-
-        delta_ms = (
-            (last_lap_ms - self._best_lap_ms) if last_lap_ms > 0 and self._best_lap_ms > 0 else None
-        )
-        counts = Counter(self._current_lap_event_counts)
+    def _llm_or_canned_summary(
+        self,
+        last_lap_ms: int,
+        delta_ms: int | None,
+        counts: Counter[str],
+        is_pb: bool,
+    ) -> str:
         user_prompt = self._build_prompt(last_lap_ms, delta_ms, counts, is_pb)
-
         try:
             text = self.provider.complete(
                 LAP_SUMMARY_SYSTEM_PROMPT,
@@ -156,13 +172,41 @@ class LapTracker:
         except ProviderError as exc:
             log.warning("provider failed on lap summary: %s — using fallback", exc)
             text = ""
-
         text = (text or "").strip().strip("\"'`")
         if not text or len(text.split()) < 3:
             text = _canned_summary(last_lap_ms, self._best_lap_ms, delta_ms, counts)
+        return text
 
-        self.voice.interrupt(text)
-        log.info("lap %d done: %s", self._last_lap_count, text)
+    def _on_lap_complete(self, last_lap_ms: int) -> str:
+        is_pb = last_lap_ms > 0 and (self._best_lap_ms < 0 or last_lap_ms <= self._best_lap_ms)
+        if last_lap_ms > 0 and (self._best_lap_ms < 0 or last_lap_ms < self._best_lap_ms):
+            self._best_lap_ms = last_lap_ms
+
+        delta_ms = (
+            (last_lap_ms - self._best_lap_ms) if last_lap_ms > 0 and self._best_lap_ms > 0 else None
+        )
+        counts = Counter(self._current_lap_event_counts)
+
+        mode = self.announce_mode
+        best_lap_line = _format_best_lap_callout(last_lap_ms, self._best_lap_ms, delta_ms, is_pb)
+
+        if mode == "best_lap":
+            # No LLM call. Just speak the short callout — free-tier-friendly.
+            text = best_lap_line
+            self.voice.interrupt(text)
+        elif mode == "both":
+            # Speak the short callout immediately, then chain the LLM summary
+            # behind it (the LLM call happens after; voice queue handles the
+            # ordering).
+            self.voice.speak(best_lap_line)
+            text = self._llm_or_canned_summary(last_lap_ms, delta_ms, counts, is_pb)
+            self.voice.interrupt(text)
+            text = f"{best_lap_line} {text}"
+        else:  # "recommendation" — current behaviour
+            text = self._llm_or_canned_summary(last_lap_ms, delta_ms, counts, is_pb)
+            self.voice.interrupt(text)
+
+        log.info("lap %d done (%s): %s", self._last_lap_count, mode, text)
         try:
             from gt7coach import status as _status
 

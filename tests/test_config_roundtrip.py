@@ -55,6 +55,35 @@ def test_save_omits_blank_optional_fields(tmp_path: Path) -> None:
     assert "model:" not in text
 
 
+def test_vr_alerts_and_lap_mode_round_trip(tmp_path: Path) -> None:
+    cfg = default_config()
+    cfg.session.lap_announce_mode = "best_lap"
+    cfg.vr_alerts.tyre_temp_enabled = False
+    cfg.vr_alerts.tyre_temp_hot_c = 105.0
+    cfg.vr_alerts.fuel_low_laps_remaining = 4.5
+    cfg.vr_alerts.shift_assist_enabled = True
+    cfg.vr_alerts.self_delta_threshold_ms = 500
+
+    path = tmp_path / "config.yaml"
+    save(cfg, path)
+
+    re = load(path)
+    assert re.session.lap_announce_mode == "best_lap"
+    assert re.vr_alerts.tyre_temp_enabled is False
+    assert re.vr_alerts.tyre_temp_hot_c == 105.0
+    assert re.vr_alerts.fuel_low_laps_remaining == 4.5
+    assert re.vr_alerts.shift_assist_enabled is True
+    assert re.vr_alerts.self_delta_threshold_ms == 500
+
+
+def test_invalid_lap_announce_mode_falls_back_to_default(tmp_path: Path) -> None:
+    path = tmp_path / "bad.yaml"
+    path.write_text("session:\n  lap_announce_mode: nonsense\n", encoding="utf-8")
+    cfg = load(path)
+    # Default is "both" — we kept it because the YAML value was rejected.
+    assert cfg.session.lap_announce_mode == "both"
+
+
 def test_save_includes_piper_settings_only_for_piper(tmp_path: Path) -> None:
     cfg = default_config()
     cfg.voice.engine = "piper"
