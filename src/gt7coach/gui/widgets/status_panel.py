@@ -76,6 +76,7 @@ class StatusPanel(QWidget):
         self._corner_count = QLabel("0")
         self._event_count = QLabel("0")
         self._last_advice = QLabel("—")
+        self._last_advice.setObjectName("adviceLabel")  # theme paints it green
         self._last_advice.setWordWrap(True)
         f = QFont()
         f.setItalic(True)
@@ -84,7 +85,10 @@ class StatusPanel(QWidget):
         run_layout = QFormLayout()
         run_layout.addRow("Corners detected:", self._corner_count)
         run_layout.addRow("Events fired:", self._event_count)
-        run_layout.addRow("Last advice:", self._last_advice)
+        run_layout.addRow(QLabel("Last advice:"))
+        # Advice gets its own full-width row so long lines wrap instead of
+        # being squeezed (and clipped) next to the form label column.
+        run_layout.addRow(self._last_advice)
         run_box = QGroupBox("Run")
         run_box.setLayout(run_layout)
 
@@ -92,6 +96,11 @@ class StatusPanel(QWidget):
         self._current_lap = QLabel("0")
         self._last_lap = QLabel("—")
         self._best_lap = QLabel("—")
+        self._best_lap.setObjectName("bestLapLabel")  # theme paints it green
+        mono = QFont("Consolas, Monaco, monospace")
+        mono.setStyleHint(QFont.StyleHint.Monospace)
+        for lbl in (self._last_lap, self._best_lap):
+            lbl.setFont(mono)
         lap_layout = QFormLayout()
         lap_layout.addRow("Lap:", self._current_lap)
         lap_layout.addRow("Last lap:", self._last_lap)

@@ -20,8 +20,8 @@ import sys
 import time
 from pathlib import Path
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction
+from PySide6.QtCore import QSettings, Qt
+from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -42,10 +42,11 @@ from PySide6.QtWidgets import (
 from gt7coach.gui.config_panel import ConfigDialog
 from gt7coach.gui.log_tail import StatusEvent, StatusTail
 from gt7coach.gui.runner import CoachOptions, CoachRunner
+from gt7coach.gui.theme import apply_theme
 from gt7coach.gui.updater import UpdateChecker, UpdateInfo
 from gt7coach.gui.widgets.advice_history import AdviceHistory
+from gt7coach.gui.widgets.console_panel import ConsolePanel
 from gt7coach.gui.widgets.lap_table import LapTable
-from gt7coach.gui.widgets.live_log import LiveLog
 from gt7coach.gui.widgets.status_panel import StatusPanel
 from gt7coach.gui.widgets.update_banner import UpdateBanner
 
@@ -61,8 +62,10 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("GT7 AI Coach")
-        self.resize(1100, 680)
+        self.setMinimumSize(900, 540)
+        self.resize(1160, 700)
 
+        self._settings = QSettings("szilvasolutions", "gt7coach-gui")
         self._runner = CoachRunner(self)
         self._status_tail = StatusTail(self)
 
@@ -71,29 +74,38 @@ class MainWindow(QMainWindow):
         toolbar.setMovable(False)
         self.addToolBar(toolbar)
 
-        self._start_action = QAction("Start", self)
+        self._start_action = QAction("▶  Start", self)
         self._start_action.triggered.connect(self._on_start)
         toolbar.addAction(self._start_action)
 
-        self._stop_action = QAction("Stop", self)
+        self._stop_action = QAction("■  Stop", self)
         self._stop_action.triggered.connect(self._on_stop)
         self._stop_action.setEnabled(False)
         toolbar.addAction(self._stop_action)
 
+        # Name the auto-created tool buttons so the theme can paint Start
+        # green and Stop red.
+        start_btn = toolbar.widgetForAction(self._start_action)
+        if start_btn is not None:
+            start_btn.setObjectName("startButton")
+        stop_btn = toolbar.widgetForAction(self._stop_action)
+        if stop_btn is not None:
+            stop_btn.setObjectName("stopButton")
+
         toolbar.addSeparator()
 
-        toolbar.addWidget(QLabel(" Provider: "))
+        toolbar.addWidget(QLabel("Provider:"))
         self._provider_combo = QComboBox()
         self._provider_combo.addItems(_PROVIDER_CHOICES)
         self._provider_combo.setCurrentText("auto")
         toolbar.addWidget(self._provider_combo)
 
-        toolbar.addWidget(QLabel(" Voice: "))
+        toolbar.addWidget(QLabel("Voice:"))
         self._voice_combo = QComboBox()
         self._voice_combo.addItems(_VOICE_CHOICES)
         toolbar.addWidget(self._voice_combo)
 
-        toolbar.addWidget(QLabel(" Rate: "))
+        toolbar.addWidget(QLabel("Rate:"))
         self._voice_rate = QSlider(Qt.Orientation.Horizontal)
         self._voice_rate.setRange(150, 280)
         self._voice_rate.setValue(200)
@@ -103,22 +115,23 @@ class MainWindow(QMainWindow):
         self._voice_rate.valueChanged.connect(lambda v: self._voice_rate_label.setText(f"{v} wpm"))
         toolbar.addWidget(self._voice_rate_label)
 
-        toolbar.addWidget(QLabel(" Style: "))
+        toolbar.addWidget(QLabel("Style:"))
         self._style_combo = QComboBox()
         self._style_combo.addItems(_DRIVER_STYLE_CHOICES)
         toolbar.addWidget(self._style_combo)
 
-        toolbar.addWidget(QLabel(" Car class: "))
+        toolbar.addWidget(QLabel("Car class:"))
         self._car_class_edit = QLineEdit()
         self._car_class_edit.setPlaceholderText('e.g. "Gr.3 RWD"')
-        self._car_class_edit.setFixedWidth(160)
+        self._car_class_edit.setFixedWidth(150)
         toolbar.addWidget(self._car_class_edit)
 
         # --- Central split (tabbed-left | log) ---------------------------
         self._status_panel = StatusPanel()
         self._lap_table = LapTable()
         self._advice_history = AdviceHistory()
-        self._live_log = LiveLog()
+        self._live_log = ConsolePanel()
+        self._live_log.hide_requested.connect(self._hide_console)
 
         left_tabs = QTabWidget()
         left_tabs.addTab(self._status_panel, "Status")
@@ -156,6 +169,19 @@ class MainWindow(QMainWindow):
         quit_action = QAction("Quit", self)
         quit_action.triggered.connect(self.close)
         file_menu.addAction(quit_action)
+
+        # --- View menu ----------------------------------------------------
+        view_menu = self.menuBar().addMenu("&View")
+        self._console_action = QAction("Console log", self)
+        self._console_action.setCheckable(True)
+        self._console_action.setShortcut(QKeySequence("Ctrl+L"))
+        self._console_action.setStatusTip("Show or hide the live console log")
+        self._console_action.toggled.connect(self._on_console_toggled)
+        view_menu.addAction(self._console_action)
+        # Restore last session's preference (default: visible).
+        console_visible = self._settings.value("view/console", True, type=bool)
+        self._console_action.setChecked(console_visible)
+        self._live_log.setVisible(console_visible)
 
         # --- Tools menu ---------------------------------------------------
         tools_menu = self.menuBar().addMenu("&Tools")
@@ -195,6 +221,39 @@ class MainWindow(QMainWindow):
         # Tracks whether the most recent exit was triggered by a Stop click
         # (so we don't pop a "crashed" dialog when the user asked for it).
         self._stop_requested: bool = False
+
+        # Restore persisted window geometry + toolbar options last, so the
+        # defaults above only apply on a truly fresh install.
+        self._restore_settings()
+
+    # ---- settings persistence ---------------------------------------------
+
+    def _restore_settings(self) -> None:
+        geo = self._settings.value("window/geometry")
+        if geo is not None:
+            self.restoreGeometry(geo)
+        self._provider_combo.setCurrentText(
+            str(self._settings.value("options/provider", self._provider_combo.currentText()))
+        )
+        self._voice_combo.setCurrentText(
+            str(self._settings.value("options/voice", self._voice_combo.currentText()))
+        )
+        self._voice_rate.setValue(
+            int(self._settings.value("options/voice_rate", self._voice_rate.value()))
+        )
+        self._style_combo.setCurrentText(
+            str(self._settings.value("options/driver_style", self._style_combo.currentText()))
+        )
+        self._car_class_edit.setText(str(self._settings.value("options/car_class", "")))
+
+    def _save_settings(self) -> None:
+        self._settings.setValue("window/geometry", self.saveGeometry())
+        self._settings.setValue("options/provider", self._provider_combo.currentText())
+        self._settings.setValue("options/voice", self._voice_combo.currentText())
+        self._settings.setValue("options/voice_rate", self._voice_rate.value())
+        self._settings.setValue("options/driver_style", self._style_combo.currentText())
+        self._settings.setValue("options/car_class", self._car_class_edit.text().strip())
+        self._settings.setValue("view/console", self._console_action.isChecked())
 
     # ---- handlers ---------------------------------------------------------
 
@@ -364,6 +423,16 @@ class MainWindow(QMainWindow):
         self._lap_table.on_status_event(ev)
         self._advice_history.on_status_event(ev)
 
+    def _on_console_toggled(self, checked: bool) -> None:
+        self._live_log.setVisible(checked)
+        # Persist immediately — the preference should survive even a crash.
+        self._settings.setValue("view/console", checked)
+
+    def _hide_console(self) -> None:
+        """The console's own ✕ button — route through the menu action so
+        the checkbox stays in sync."""
+        self._console_action.setChecked(False)
+
     def _open_config_dialog(self) -> None:
         dlg = ConfigDialog(self)
         dlg.exec()
@@ -420,6 +489,7 @@ class MainWindow(QMainWindow):
             "MainWindow.closeEvent — runner_running=%s",
             self._runner.is_running(),
         )
+        self._save_settings()
         if self._runner.is_running():
             self._runner.stop()
         self._status_tail.stop()
@@ -573,6 +643,7 @@ def main(argv: list[str] | None = None) -> int:
         app = QApplication(sys.argv)
         app.setApplicationName("GT7 AI Coach")
         app.setOrganizationName("szilvasolutions")
+        apply_theme(app)
         app.aboutToQuit.connect(lambda: boot_log.info("aboutToQuit signal received"))
 
         boot_log.debug("constructing MainWindow")

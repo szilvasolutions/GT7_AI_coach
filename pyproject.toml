@@ -62,6 +62,7 @@ gt7coach-gui = "gt7coach.gui.app:main"
 
 [tool.setuptools.package-data]
 "gt7coach.tracks" = ["data/*.json", "data/*.md"]
+"gt7coach.gui" = ["assets/*.svg"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

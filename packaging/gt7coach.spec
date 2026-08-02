@@ -22,6 +22,7 @@ SRC = ROOT / "src"
 # (the PySide6 + pyttsx3 binaries are picked up automatically).
 datas = [
     (str(SRC / "gt7coach" / "tracks" / "data"), "gt7coach/tracks/data"),
+    (str(SRC / "gt7coach" / "gui" / "assets"), "gt7coach/gui/assets"),
     (str(ROOT / "config.example.yaml"), "."),
     (str(ROOT / "README.md"), "."),
 ]

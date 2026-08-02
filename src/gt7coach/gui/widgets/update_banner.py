@@ -34,8 +34,8 @@ class UpdateBanner(QFrame):
         super().__init__(parent)
         self.setFrameShape(QFrame.Shape.StyledPanel)
         self.setStyleSheet(
-            "QFrame { background-color: #e7f1fc; border: 1px solid #b6d2ee; }"
-            "QLabel { background: transparent; }"
+            "QFrame { background-color: #1d3049; border: 1px solid #2f5379; border-radius: 4px; }"
+            "QLabel { background: transparent; color: #cfe2f7; }"
         )
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.setVisible(False)
