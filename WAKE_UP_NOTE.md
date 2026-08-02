@@ -1,5 +1,10 @@
 # Wake-up note — overnight cleanup pass
 
+> **Status addendum (2026-08-02):** item 3 below (packet watchdog) has
+> since been fixed — the receiver runs a stats loop and raises a 16 s
+> disconnect alarm surfaced in the GUI. Item 1 of "first thing to look
+> at" (recording the demo) is still open. Test count is now 195+.
+
 Cleanup-and-documentation pass on the GT7_AI_coach repo. No new
 features, no refactors. Eight commits sitting on `main`, all pushed.
 Auto-pull will land them on the laptop before you sit down.

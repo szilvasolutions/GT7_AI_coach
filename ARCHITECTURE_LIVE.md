@@ -290,8 +290,8 @@ else, with CLI flags overriding for any specific run. See
 
 ## Testing
 
-121 tests, 120 pass + 1 skipped (`pyttsx3` on Linux sandbox). Split by
-concern:
+195+ tests (exact count grows with each phase; `pyttsx3`-dependent ones
+skip on Linux sandboxes). Split by concern:
 
 | File | Coverage |
 |---|---|
@@ -335,8 +335,14 @@ live:
   delta, tyre state, gear/RPM/coasting, recent fault pattern. Phase 5
   added top-3 events and recent advice.
 
-Items still out of scope and intentionally so: GUI / overlay,
-reference-lap comparison (Coach Dave Delta's territory), setup
-recommendations, multi-game, web dashboard, per-car tyre optimum,
-auto-numbered corners in advice, race-start / checkered-flag
-announcements.
+Shipped after this document's phase log by Phases A–E: Qt GUI
+(`gt7coach-gui`: runner subprocess, status stream, config dialog),
+first-run setup wizard, SHA-256-verified self-updater with rollback,
+receiver stats loop + 16 s disconnect alarm, and VR voice-HUD alerts
+(tyre temp, fuel, coolant, shift, self-delta) with a selectable
+end-of-lap announce mode.
+
+Items still out of scope and intentionally so: reference-lap
+comparison (Coach Dave Delta's territory), setup recommendations,
+multi-game, web dashboard, per-car tyre optimum, auto-numbered corners
+in advice, race-start / checkered-flag announcements.

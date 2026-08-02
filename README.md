@@ -91,6 +91,7 @@ one voice extra (`voice` for pyttsx3, `piper` for neural TTS).
 pip install -e ".[dev,gemini,voice]"      # Gemini + pyttsx3 (recommended)
 pip install -e ".[dev,anthropic,voice]"   # Anthropic + pyttsx3
 pip install -e ".[dev,ollama]"            # local Ollama, no voice
+pip install -e ".[dev,gemini,voice,gui]"  # + the desktop GUI (gt7coach-gui)
 pip install -e ".[dev,all]"               # everything
 ```
 
@@ -231,7 +232,7 @@ pytest
 ruff check
 ```
 
-The full suite runs without any PS5. 120+ tests cover Salsa20 decrypt, packet
+The full suite runs without any PS5. 195+ tests cover Salsa20 decrypt, packet
 parsing, every detector, the corner segmenter, all providers, the rate
 limiter, the async advisor worker, the track database, and the lap tracker.
 
