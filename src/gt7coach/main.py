@@ -119,13 +119,7 @@ def _select_provider(
     return config_choice, "config (no API keys found — will error)"
 
 
-def _stream_live(args: argparse.Namespace) -> tuple[Iterator[Packet], Receiver | None]:
-    cfg = ReceiverConfig(
-        ps5_ip=args.ip,
-        port_rx=args.port_rx,
-        port_tx=args.port_tx,
-        packet_format=args.format,
-    )
+def _stream_live(cfg: ReceiverConfig) -> tuple[Iterator[Packet], Receiver | None]:
     rx = Receiver(cfg)
     rx.start()
     return rx.packets(), rx
@@ -153,17 +147,43 @@ def _stream_replay(args: argparse.Namespace) -> tuple[Iterator[Packet], None]:
     return replay_csv(path, realtime=args.realtime), None
 
 
-def _run_detectors(trace: CornerTrace) -> list[Event]:
+# Per-corner detectors keyed by the names used in config.yaml's
+# ``detectors.enabled`` list and ``detector_configs``. Order matters: the
+# positive-feedback clean-corner detector runs after all of these.
+_DETECTORS: list[tuple[str, object]] = [
+    ("braking.late_brake", detect_late_brake),
+    ("braking.lockup", detect_lockup),
+    ("braking.trail_off_too_fast", detect_trail_off_too_fast),
+    ("throttle.wheelspin", detect_wheelspin),
+    ("throttle.sawing", detect_sawing),
+    ("throttle.early_lift", detect_early_lift),
+    ("steering.understeer", detect_understeer),
+    ("steering.oversteer", detect_oversteer),
+    ("line.late_apex", detect_late_apex),
+]
+
+
+def _off_track_or_paused(packet: Packet) -> bool:
+    """True for frames captured in menus / replays / while paused.
+
+    GT7's flags word: bit 0 = car on track, bit 1 = paused. ``flags == 0``
+    means unknown (synthetic packets, captures from before the flags column
+    existed) — treat those as live so replays keep working.
+    """
+    return packet.flags != 0 and (not packet.flags & 0x01 or bool(packet.flags & 0x02))
+
+
+def _run_detectors(
+    trace: CornerTrace,
+    enabled: set[str] | None = None,
+    configs: dict[str, object] | None = None,
+) -> list[Event]:
     events: list[Event] = []
-    events += detect_late_brake(trace)
-    events += detect_lockup(trace)
-    events += detect_trail_off_too_fast(trace)
-    events += detect_wheelspin(trace)
-    events += detect_sawing(trace)
-    events += detect_early_lift(trace)
-    events += detect_understeer(trace)
-    events += detect_oversteer(trace)
-    events += detect_late_apex(trace)
+    for name, func in _DETECTORS:
+        if enabled is not None and name not in enabled:
+            continue
+        cfg = (configs or {}).get(name)
+        events += func(trace, config=cfg)  # type: ignore[operator]
     # Positive-feedback detector runs LAST and only fires when nothing else
     # did — it explicitly looks at the other events.
     events += detect_clean_corner(trace, other_events=events)
@@ -374,9 +394,12 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     voice_name = args.voice if args.voice != "pyttsx3" else cfg.voice.engine
+    if voice_name == "system":  # documented alias: pyttsx3 IS the system TTS
+        voice_name = "pyttsx3"
     voice_kwargs: dict[str, object] = {}
     if voice_name == "pyttsx3":
-        voice_kwargs["rate"] = args.voice_rate
+        # CLI default is 200; an explicit --voice-rate wins over YAML.
+        voice_kwargs["rate"] = args.voice_rate if args.voice_rate != 200 else cfg.voice.speed
     elif voice_name == "piper":
         voice_kwargs["voice"] = cfg.voice.piper_voice
         if cfg.voice.piper_model_path:
@@ -401,13 +424,26 @@ def main(argv: list[str] | None = None) -> int:
         car_class=car_class,
     )
     if args.source == "live":
-        stream, rx = _stream_live(args)
+        # Precedence: defaults < config.yaml < explicit CLI flag. The YAML
+        # network section is the base; a non-default CLI value overrides it
+        # (this is what makes the setup wizard's saved ps5_ip actually work).
+        net = cfg.network
+        if args.ip != "auto":
+            net.ps5_ip = args.ip
+        if args.port_rx != 33740:
+            net.port_rx = args.port_rx
+        if args.port_tx != 33739:
+            net.port_tx = args.port_tx
+        if args.format != "B":
+            net.packet_format = args.format
+        stream, rx = _stream_live(net)
     else:
         stream, rx = _stream_replay(args)
 
     session: SessionLogger | None = None
     if not args.no_log:
-        session = SessionLogger(args.log_dir, cli_args=vars(args).copy())
+        log_dir = args.log_dir if args.log_dir != Path("./sessions") else Path(cfg.session.log_dir)
+        session = SessionLogger(log_dir, cli_args=vars(args).copy())
         for k, v in list(session._cli_args.items()):
             if isinstance(v, Path):
                 session._cli_args[k] = str(v)
@@ -456,7 +492,10 @@ def main(argv: list[str] | None = None) -> int:
 
     signal.signal(signal.SIGINT, _shutdown)
 
-    seg = CornerSegmenter()
+    seg = CornerSegmenter(cfg.corner)
+    unknown_detectors = cfg.detectors_enabled - {"corner.segment", *(n for n, _ in _DETECTORS)}
+    if unknown_detectors:
+        log.warning("config detectors.enabled has unknown names: %s", sorted(unknown_detectors))
     incident_detector = IncidentDetector()
     track_detector = TrackDetector()
     vr_alert_detector = VRAlertDetector(cfg=cfg.vr_alerts)
@@ -480,6 +519,10 @@ def main(argv: list[str] | None = None) -> int:
         for packet in stream:
             if session is not None:
                 session.log_packet(packet)
+            # GT7 keeps streaming packets in menus, replays and while paused —
+            # skip those frames so detectors and lap timing don't chew on garbage.
+            if _off_track_or_paused(packet):
+                continue
             # Track detector wants every packet (it maintains a position
             # buffer for sequence matching).
             if track_detector.track is None:
@@ -523,7 +566,7 @@ def main(argv: list[str] | None = None) -> int:
             if trace is None:
                 continue
             corner_idx += 1
-            events = _run_detectors(trace)
+            events = _run_detectors(trace, cfg.detectors_enabled, cfg.detector_configs)
             log.info(
                 "corner #%d: %.2fs entry=%.0f->min=%.0f->exit=%.0f km/h peak=%.2fg events=%d",
                 corner_idx,
@@ -551,7 +594,7 @@ def main(argv: list[str] | None = None) -> int:
         trailing = seg.flush()
         if trailing is not None:
             corner_idx += 1
-            trailing_events = _run_detectors(trailing)
+            trailing_events = _run_detectors(trailing, cfg.detectors_enabled, cfg.detector_configs)
             if session is not None:
                 session.log_corner(corner_idx, trailing, trailing_events)
             advisor.on_corner(trailing, trailing_events, corner_idx=corner_idx)

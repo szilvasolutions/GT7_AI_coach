@@ -43,8 +43,8 @@ log = logging.getLogger(__name__)
 
 @dataclass(slots=True)
 class VoiceSettings:
-    engine: str = "pyttsx3"  # pyttsx3 | piper | null
-    speed: int = 230  # pyttsx3 rate
+    engine: str = "pyttsx3"  # pyttsx3 | piper | system | null
+    speed: int = 200  # pyttsx3 rate (230 felt rushed in cockpit audio)
     piper_voice: str = "en_US-amy-medium"
     piper_model_path: str | None = None
 
@@ -52,7 +52,7 @@ class VoiceSettings:
 @dataclass(slots=True)
 class SessionSettings:
     log_dir: str = "./sessions"
-    rotation_mb: int = 10  # currently informational
+    rotation_mb: int = 10  # reserved — log rotation is not implemented yet
     generate_summary: bool = True
     # End-of-lap voice mode. "recommendation" = current behaviour (LLM
     # summary), "best_lap" = short PB callout only (no LLM call, free-

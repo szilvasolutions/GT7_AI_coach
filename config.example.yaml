@@ -17,7 +17,6 @@ coach:
   # for gemini, llama3.1:8b for ollama).
   # model: claude-haiku-4-5
   driver_style: smooth       # smooth | aggressive | learning
-  max_advice_per_corner: 1
   global_rate_limit_seconds: 4
   # car_class is a free-form string spliced into every coaching prompt so the
   # AI can tailor advice to your drivetrain / power tier. Examples:
@@ -28,17 +27,24 @@ coach:
   # track: deep_forest
 
 voice:
-  engine: pyttsx3            # pyttsx3 | piper | system
-  speed: 230
+  engine: pyttsx3            # pyttsx3 | piper | system (alias of pyttsx3) | null
+  speed: 200                 # words/min; 230 felt rushed in cockpit audio
   piper_voice: en_US-amy-medium
 
 detectors:
+  # Remove a line to disable that detector. quality.clean_corner (positive
+  # feedback) always runs and only fires when nothing below did.
   enabled:
     - corner.segment
     - braking.late_brake
+    - braking.lockup
+    - braking.trail_off_too_fast
     - throttle.wheelspin
     - throttle.sawing
+    - throttle.early_lift
     - steering.understeer
+    - steering.oversteer
+    - line.late_apex
   thresholds:
     corner_min_speed_kmh: 45
     corner_entry_brake: 65
@@ -47,7 +53,7 @@ detectors:
 
 session:
   log_dir: ./sessions
-  rotation_mb: 10
+  rotation_mb: 10            # reserved — log rotation not implemented yet
   generate_summary: true
   # End-of-lap voice mode. 'recommendation' = LLM-generated summary (current
   # behaviour); 'best_lap' = short PB / delta callout only, no LLM call

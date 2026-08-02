@@ -124,3 +124,75 @@ def test_track_object_has_attributes_status_emit_uses() -> None:
     # main.py:486 -> status.emit("track", id=tr.id, name=tr.display_name)
     assert "id" in field_names
     assert "display_name" in field_names
+
+
+# ---- detector enable/config wiring ------------------------------------------
+
+
+def test_run_detectors_all_enabled_matches_no_filter() -> None:
+    from gt7coach.detectors import CornerTrace
+    from gt7coach.main import _DETECTORS, _run_detectors
+    from tests._synth import build_bad_corner_trace
+
+    trace = CornerTrace(packets=build_bad_corner_trace())
+    unfiltered = _run_detectors(trace)
+    all_enabled = _run_detectors(trace, {name for name, _ in _DETECTORS}, {})
+    assert [e.type for e in unfiltered] == [e.type for e in all_enabled]
+    assert unfiltered  # the synthetic bad corner must actually fire something
+
+
+def test_run_detectors_respects_enabled_set() -> None:
+    from gt7coach.detectors import CornerTrace
+    from gt7coach.main import _run_detectors
+    from tests._synth import build_bad_corner_trace
+
+    trace = CornerTrace(packets=build_bad_corner_trace())
+    events = _run_detectors(trace, {"steering.understeer"}, {})
+    # Only understeer may fire; clean_corner stays silent because it saw events.
+    assert events
+    assert {e.type for e in events} == {"steering.understeer"}
+
+
+def test_run_detectors_passes_custom_config() -> None:
+    from gt7coach.detectors import CornerTrace, UndersteerConfig
+    from gt7coach.main import _run_detectors
+    from tests._synth import build_bad_corner_trace
+
+    trace = CornerTrace(packets=build_bad_corner_trace())
+    # An impossibly strict threshold must suppress the understeer event that
+    # fires with defaults — proving the config object reaches the detector.
+    strict = UndersteerConfig(ratio_threshold=99.0)
+    events = _run_detectors(trace, {"steering.understeer"}, {"steering.understeer": strict})
+    assert "steering.understeer" not in {e.type for e in events}
+
+
+# ---- flags gate (menus / replays / pause) ------------------------------------
+
+
+def test_off_track_or_paused_gate() -> None:
+    from gt7coach.main import _off_track_or_paused
+    from tests._synth import make_packet
+
+    assert not _off_track_or_paused(make_packet(flags=0))  # unknown -> live
+    assert not _off_track_or_paused(make_packet(flags=0b0001))  # on track
+    assert not _off_track_or_paused(make_packet(flags=153))  # real capture, racing
+    assert _off_track_or_paused(make_packet(flags=0b0011))  # on track but paused
+    assert _off_track_or_paused(make_packet(flags=0b0010))  # paused in menu
+    assert _off_track_or_paused(make_packet(flags=0b1000))  # nonzero, not on track
+    assert _off_track_or_paused(make_packet(flags=411))  # real capture, paused
+
+
+# ---- voice engine "system" alias ---------------------------------------------
+
+
+def test_make_voice_system_is_alias_not_unknown() -> None:
+    from gt7coach.voice import make_voice
+
+    try:
+        engine = make_voice("system")
+    except (ImportError, RuntimeError):
+        pytest.skip("pyttsx3 not installed")
+    except ValueError:
+        pytest.fail("'system' is documented and must alias pyttsx3, not raise")
+    else:
+        assert type(engine).__name__ == "PyttsxVoiceEngine"

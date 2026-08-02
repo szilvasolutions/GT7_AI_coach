@@ -35,6 +35,9 @@ def make_voice(name: str, **kwargs) -> VoiceEngine:
         ``piper``     -> :class:`PiperVoiceEngine` (neural TTS, better quality)
     """
     key = (name or "").lower()
+    if key == "system":
+        # Documented alias — pyttsx3 wraps the OS system TTS (SAPI/NSSpeech/espeak).
+        key = "pyttsx3"
     if key in ("null", "none", ""):
         from gt7coach.voice.null_engine import NullVoiceEngine
 
