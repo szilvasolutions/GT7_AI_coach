@@ -189,6 +189,7 @@ def build_user_prompt(
     *,
     recent_advice: Sequence[tuple[str, str]] | None = None,
     recent_events: Sequence[tuple[str, str]] | None = None,
+    sequence: Sequence[str] | None = None,
 ) -> str:
     """Compose the per-corner user-message body.
 
@@ -203,6 +204,10 @@ def build_user_prompt(
         recent_events: Last few (corner_type, top_event_type) pairs from
             previous corners (the fault pattern, separate from the
             utterances).
+        sequence: Fault summaries (oldest first) of the corners immediately
+            before this one whose advice was superseded before it could be
+            spoken — set when corners came too fast to coach individually.
+            The response should address the pattern across the whole run.
     """
     events_lines = "\n".join(
         f"- {e.type} (severity {e.severity:.2f}): {_summarise_evidence(e.evidence)}" for e in events
@@ -249,6 +254,17 @@ def build_user_prompt(
         blocks.append(f"Tyres: {context.tyre_state}.")
 
     blocks.append(f"Detected events:\n{events_lines}")
+
+    if sequence:
+        seq_lines = "\n".join(f"- {s}" for s in sequence)
+        blocks.append(
+            "SEQUENCE: this corner ended a linked run of corners driven "
+            "back-to-back — there was no time to coach the earlier ones. "
+            "Their faults, oldest first:\n"
+            f"{seq_lines}\n"
+            "Coach the PATTERN across the whole run (favour the most severe "
+            "or repeated fault), still ONE sentence."
+        )
 
     if recent_events:
         events_line = ", ".join(f"{ctype}/{etype}" for ctype, etype in recent_events)

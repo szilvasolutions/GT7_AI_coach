@@ -31,6 +31,10 @@ a per-corner audit log you can review afterwards.
   next corner's apex, so advice never talks over your braking point. Uses
   the track polyline + your live speed; tune or disable under `cue_timing:`
   in config.yaml.
+* **Sequence coaching** — when corners come too fast to coach individually
+  (esses, chicane complexes), superseded corners aren't discarded: their
+  faults fold into the next line, and the coach gives ONE sentence about
+  the pattern across the whole run instead of only the last corner.
 * **Per-run session logs** (telemetry CSV, events JSONL, coach JSONL with
   every prompt + response, meta JSON, optional end-of-session debrief).
 

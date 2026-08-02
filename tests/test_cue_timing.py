@@ -186,14 +186,14 @@ def test_hold_times_out_and_speaks_anyway() -> None:
     assert time.monotonic() - t0 >= 0.2  # it really did hold before giving up
 
 
-def test_hold_dropped_when_newer_corner_arrives() -> None:
+def test_hold_folds_into_newer_corner_and_prompts_the_sequence() -> None:
     sched = _StubScheduler(allow=False, max_hold_s=3.0)
     voice = NullVoiceEngine()
-    calls: list[int] = []
+    prompts: list[str] = []
 
-    def responder(_s, _u):
-        calls.append(1)
-        return f"Advice number {len(calls)}."
+    def responder(_s, u):
+        prompts.append(u)
+        return f"Advice number {len(prompts)}."
 
     advisor = _advisor(MockProvider(responder=responder), voice, sched, async_mode=True)
     trace, events, idx = _corner(1)
@@ -204,10 +204,13 @@ def test_hold_dropped_when_newer_corner_arrives() -> None:
     advisor.on_corner(trace2, events2, corner_idx=idx2)
     advisor.flush(timeout=3.0)
     advisor.stop()
-    # Corner 1's advice was superseded mid-hold and never spoken.
+    # Corner 1's line was never spoken, but its faults rode into corner 2's
+    # prompt as sequence context, and one combined line was spoken.
     assert voice.spoken == ["Advice number 2."]
     reasons = [r.suppressed_reason for r in advisor.history]
-    assert "superseded-while-holding-cue" in reasons
+    assert "folded-into-next-corner" in reasons
+    assert "SEQUENCE" in prompts[-1]
+    assert "braking.late_brake" in prompts[-1]
 
 
 def test_sync_mode_never_blocks_on_hold() -> None:
@@ -222,3 +225,99 @@ def test_sync_mode_never_blocks_on_hold() -> None:
     # Sync mode speaks immediately — a held cue would stall the receive loop.
     assert time.monotonic() - t0 < 1.0
     assert voice.spoken == ["Brake earlier."]
+
+
+# ---- sequence folding (drop-newest path, no cue hold involved) -----------------
+
+
+def test_drop_newest_folds_faults_and_caps_depth() -> None:
+    """Corners replaced while the worker is busy fold into the survivor's
+    prompt, oldest first, capped at 3 predecessors."""
+    gate = threading.Event()
+    prompts: list[str] = []
+
+    def responder(_s, u):
+        gate.wait(timeout=3.0)  # hold the worker inside the first LLM call
+        prompts.append(u)
+        return "Line."
+
+    voice = NullVoiceEngine()
+    advisor = _advisor(
+        MockProvider(responder=responder),
+        voice,
+        _StubScheduler(allow=True),
+        async_mode=True,
+    )
+
+    def corner_with(event_type: str, idx: int):
+        pkts = [make_packet(packet_id=i, recv_time=i * 0.02, speed_kmh=100) for i in range(20)]
+        return CornerTrace(packets=pkts), [Event(type=event_type, severity=0.8, t_offset=0.0)], idx
+
+    # Corner 1 occupies the worker; corners 2-6 arrive while it's busy.
+    trace1, events1, _ = corner_with("braking.late_brake", 1)
+    advisor.on_corner(trace1, events1, corner_idx=1)
+    time.sleep(0.1)  # ensure the worker picked up corner 1 before we queue more
+    for n, etype in enumerate(
+        ["braking.lockup", "throttle.wheelspin", "steering.understeer", "steering.oversteer"],
+        start=2,
+    ):
+        trace_n, events_n, _ = corner_with(etype, n)
+        advisor.on_corner(trace_n, events_n, corner_idx=n)
+    trace_last, events_last, _ = corner_with("line.late_apex", 6)
+    advisor.on_corner(trace_last, events_last, corner_idx=6)
+    gate.set()
+    advisor.flush(timeout=3.0)
+    advisor.stop()
+
+    # Two LLM calls: corner 1 (blocked, then spoken) and corner 6 (survivor).
+    assert len(prompts) == 2
+    final = prompts[-1]
+    assert "SEQUENCE" in final
+    # Capped at 3 predecessors: the oldest folded corner (2) fell off.
+    assert "braking.lockup" not in final
+    assert "throttle.wheelspin" in final
+    assert "steering.understeer" in final
+    assert "steering.oversteer" in final
+
+
+def test_clean_corner_after_faulty_sequence_is_not_a_compliment() -> None:
+    """A quality.* winner closing a sequence with unspoken faults must use
+    the corrective prompt, not the compliment prompt."""
+    gate = threading.Event()
+    systems: list[str] = []
+
+    def responder(s, _u):
+        gate.wait(timeout=3.0)
+        systems.append(s)
+        return "Line about the pattern."
+
+    advisor = _advisor(
+        MockProvider(responder=responder),
+        NullVoiceEngine(),
+        _StubScheduler(allow=True),
+        async_mode=True,
+    )
+    pkts = [make_packet(packet_id=i, recv_time=i * 0.02, speed_kmh=100) for i in range(20)]
+    advisor.on_corner(
+        CornerTrace(packets=pkts),
+        [Event(type="braking.late_brake", severity=0.8, t_offset=0.0)],
+        corner_idx=1,
+    )
+    time.sleep(0.1)
+    advisor.on_corner(
+        CornerTrace(packets=pkts),
+        [Event(type="steering.understeer", severity=0.7, t_offset=0.0)],
+        corner_idx=2,
+    )
+    advisor.on_corner(
+        CornerTrace(packets=pkts),
+        [Event(type="quality.clean_corner", severity=0.15, t_offset=0.0)],
+        corner_idx=3,
+    )
+    gate.set()
+    advisor.flush(timeout=3.0)
+    advisor.stop()
+    from gt7coach.coach.prompt import COMPLIMENT_SYSTEM_PROMPT
+
+    # The survivor (clean corner + folded faults) must NOT get the compliment prompt.
+    assert systems[-1] != COMPLIMENT_SYSTEM_PROMPT

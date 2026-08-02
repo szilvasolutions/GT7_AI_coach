@@ -344,8 +344,12 @@ end-of-lap announce mode. Phase F added duration-aware cue timing
 (`coach/cue_timing.py`): the advisor worker estimates each utterance's
 spoken length and holds it until it can finish `finish_margin_s` before
 the next apex, computed from the matched track polyline + live speed;
-cues superseded mid-hold by a newer corner are dropped, and after
-`max_hold_s` the line is spoken regardless.
+after `max_hold_s` the line is spoken regardless. Cues superseded by a
+newer corner (mid-hold, or via the worker's drop-newest replacement) are
+not discarded: their fault summaries fold into the surviving job's
+`predecessors` (capped at 3, oldest trimmed), and the prompt then asks
+for one line coaching the pattern across the sequence. A clean corner
+closing a faulty sequence is coached correctively, not complimented.
 
 Items still out of scope and intentionally so: reference-lap
 comparison (Coach Dave Delta's territory), setup recommendations,

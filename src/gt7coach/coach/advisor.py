@@ -11,8 +11,10 @@ This module hosts:
   so a slow provider response (Gemini occasionally takes 5-20 s) never
   blocks the telemetry receive loop. The worker uses drop-newest semantics:
   if a fresh corner arrives while it's still working on a previous one,
-  the old work is abandoned and the new corner takes its place — stale
-  advice for a corner the driver has already left is worse than no advice.
+  the old corner's LINE is abandoned (stale advice for a corner the driver
+  has already left is worse than no advice) but its FAULTS are folded into
+  the newer job's ``predecessors``, so the line that finally gets spoken
+  can coach the pattern across the whole linked sequence.
 * :meth:`Advisor.on_incident` — the synchronous spin/crash path. Incidents
   are short, interrupt-class messages and don't share the corner worker.
 """
@@ -246,6 +248,12 @@ class _PendingJob:
     ``corner_idx`` is preserved so the eventual ``AdvisorResult`` can be
     correlated with the corresponding entry in the session log even after
     the receive loop has moved on to later corners.
+
+    ``predecessors`` carries compact fault summaries of earlier corners in a
+    linked sequence whose own advice was superseded before it could be
+    spoken (drop-newest replacement or a cue held past a newer corner).
+    When non-empty, the prompt asks for ONE line coaching the pattern
+    across the whole sequence instead of just this corner.
     """
 
     corner_idx: int
@@ -255,6 +263,18 @@ class _PendingJob:
     top: list[Event]
     now: float | None
     enqueued_at: float = field(default_factory=lambda: 0.0)
+    predecessors: list[str] = field(default_factory=list)
+
+
+# How many superseded corners a sequence prompt may reference. Oldest are
+# trimmed first; deeper history than this is stale by the time it's spoken.
+_SEQUENCE_DEPTH = 3
+
+
+def _summarise_superseded(job: _PendingJob) -> str:
+    """One compact line describing a corner whose advice was never spoken."""
+    faults = ", ".join(f"{e.type} (severity {e.severity:.2f})" for e in job.top[:2])
+    return f"{job.trace.corner_type}: {faults}"
 
 
 # ---- Advisor ----------------------------------------------------------------
@@ -369,10 +389,16 @@ class Advisor:
         if self._worker_thread is None:
             return self._process_job(job)
         with self._pending_lock:
-            replaced = self._pending is not None
+            old = self._pending
+            if old is not None:
+                # Fold the replaced corner's faults into the newer job so the
+                # eventual line can coach the whole sequence, not just its tail.
+                job.predecessors = [*old.predecessors, _summarise_superseded(old)][
+                    -_SEQUENCE_DEPTH:
+                ]
             self._pending = job
-        if replaced:
-            log.info("worker still busy; replacing pending corner with newer one")
+        if old is not None:
+            log.info("worker still busy; folding pending corner into newer one")
         self._worker_idle.clear()
         self._wake.set()
         # Synchronous stub for the caller. The worker will fire the on_result
@@ -498,9 +524,12 @@ class Advisor:
             self.config.driver_style,
             recent_advice=list(self._recent_advice),
             recent_events=list(self._recent_events),
+            sequence=job.predecessors or None,
         )
-        # Route to the compliment system prompt for positive-feedback events.
-        is_compliment = job.winner.type.startswith("quality.")
+        # Route to the compliment system prompt for positive-feedback events —
+        # unless this corner closes a sequence with unspoken faults, in which
+        # case the pattern is what needs coaching, not the tidy final corner.
+        is_compliment = job.winner.type.startswith("quality.") and not job.predecessors
         system_prompt = COMPLIMENT_SYSTEM_PROMPT if is_compliment else SYSTEM_PROMPT
 
         try:
@@ -533,11 +562,11 @@ class Advisor:
                 )
             failure_reason = f"{failure_reason or 'empty-response'}; spoke fallback"
 
-        if not self._await_cue_window(advice):
+        if not self._await_cue_window(advice, job):
             return self._record(
                 None,
                 job.winner,
-                "superseded-while-holding-cue",
+                "folded-into-next-corner",
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 corner_idx=job.corner_idx,
@@ -558,10 +587,12 @@ class Advisor:
             trace=job.trace,
         )
 
-    def _await_cue_window(self, advice: str) -> bool:
+    def _await_cue_window(self, advice: str, job: _PendingJob) -> bool:
         """Hold until ``advice`` fits before the next corner (duration-aware
         cue timing). Returns False if a newer corner superseded this one
-        while holding — the advice is stale and must not be spoken.
+        while holding — the line itself is stale and must not be spoken, but
+        this corner's faults are folded into the newer job so the next line
+        can coach the whole sequence.
 
         Never blocks in sync mode (no worker thread): a held cue there would
         stall the telemetry receive loop, which is worse than a mistimed
@@ -592,9 +623,17 @@ class Advisor:
         while not self._stop_evt.is_set() and time.monotonic() < deadline:
             time.sleep(sched.config.poll_s)
             with self._pending_lock:
-                superseded = self._pending is not None
-            if superseded:
-                log.info("cue dropped: newer corner arrived while holding")
+                pend = self._pending
+                if pend is not None:
+                    # This corner's line dies, but its faults ride along:
+                    # it's older than anything the pending job has collected.
+                    pend.predecessors = [
+                        *job.predecessors,
+                        _summarise_superseded(job),
+                        *pend.predecessors,
+                    ][-_SEQUENCE_DEPTH:]
+            if pend is not None:
+                log.info("cue folded: newer corner arrived while holding; coaching the sequence")
                 return False
             if sched.clearance(duration):
                 log.debug("cue window opened; speaking")
