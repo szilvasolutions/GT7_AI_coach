@@ -26,6 +26,11 @@ a per-corner audit log you can review afterwards.
   you having to type anything. Vendored from public sources, see Credits.
 * **Async LLM worker** with drop-newest semantics — a slow Gemini call never
   stalls telemetry processing or backs up a queue of stale advice.
+* **Duration-aware cue timing** — the coach estimates how long each line
+  takes to say and holds it until it can *finish* at least 2.5 s before the
+  next corner's apex, so advice never talks over your braking point. Uses
+  the track polyline + your live speed; tune or disable under `cue_timing:`
+  in config.yaml.
 * **Per-run session logs** (telemetry CSV, events JSONL, coach JSONL with
   every prompt + response, meta JSON, optional end-of-session debrief).
 

@@ -5,11 +5,26 @@ from __future__ import annotations
 from typing import Protocol
 
 
+def estimate_speech_seconds(text: str, *, wpm: float = 170.0, overhead_s: float = 0.4) -> float:
+    """Rough duration of ``text`` spoken at ``wpm`` words per minute.
+
+    Used by the cue scheduler to decide whether an utterance fits before the
+    next corner. Word count over rate plus a fixed engine spin-up overhead is
+    within ~20% of real TTS output for coaching-length lines, which is plenty
+    — the scheduler's finish margin absorbs the error.
+    """
+    words = max(1, len(text.split()))
+    return words / (wpm / 60.0) + overhead_s
+
+
 class VoiceEngine(Protocol):
     """Per ARCHITECTURE.md section 8."""
 
     def speak(self, text: str) -> None:
         """Enqueue ``text`` for speech. Non-blocking."""
+
+    def estimate_duration(self, text: str) -> float:
+        """Estimated seconds of audio ``speak(text)`` would produce."""
 
     def interrupt(self, text: str) -> None:
         """Clear any pending utterances and queue ``text`` next.

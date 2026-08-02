@@ -59,6 +59,11 @@ class PyttsxVoiceEngine:
         log.debug("voice.speak queued: %r (queue=%d)", text, len(self._queue))
         self._wake.set()
 
+    def estimate_duration(self, text: str) -> float:
+        from gt7coach.voice.base import estimate_speech_seconds
+
+        return estimate_speech_seconds(text, wpm=float(self._rate))
+
     def interrupt(self, text: str) -> None:
         """Clear pending utterances and queue ``text`` next."""
         text = (text or "").strip()

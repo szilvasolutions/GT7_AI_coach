@@ -60,6 +60,15 @@ session:
   # (free-tier-friendly); 'both' = callout then summary.
   lap_announce_mode: both
 
+# Duration-aware cue timing: the coach estimates how long each line takes to
+# say and holds it until it can FINISH at least finish_margin_s before the
+# next corner's apex — so advice never talks over your braking point. Only
+# active once the track is auto-detected (or forced via coach.track).
+cue_timing:
+  enabled: true
+  finish_margin_s: 2.5       # audio must end this long before the next apex
+  max_hold_s: 6.0            # give up waiting and speak anyway after this
+
 # VR voice-HUD alerts: spoken callouts replacing the unreadable in-headset
 # digital HUD. Each alert can be toggled independently; all alerts share the
 # global coach.global_rate_limit_seconds cooldown.

@@ -22,10 +22,12 @@ from __future__ import annotations
 import logging
 import random
 import threading
+import time
 from collections import deque
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 
+from gt7coach.coach.cue_timing import CueScheduler
 from gt7coach.coach.prompt import (
     COMPLIMENT_SYSTEM_PROMPT,
     SARCASTIC_SYSTEM_PROMPT,
@@ -268,11 +270,15 @@ class Advisor:
         rate_limiter: RateLimiter,
         config: AdvisorConfig | None = None,
         on_result: ResultCallback | None = None,
+        cue_scheduler: CueScheduler | None = None,
     ) -> None:
         self.provider = provider
         self.voice = voice
         self.rate_limiter = rate_limiter
         self.config = config or AdvisorConfig()
+        # Optional duration-aware cue timing: when set, the worker delays
+        # voice.speak() until the utterance fits before the next corner.
+        self.cue_scheduler = cue_scheduler
         self.history: list[AdvisorResult] = []
         self.incident_history: list[IncidentResult] = []
         # Callback invoked AFTER an AdvisorResult is finalised — including
@@ -527,6 +533,17 @@ class Advisor:
                 )
             failure_reason = f"{failure_reason or 'empty-response'}; spoke fallback"
 
+        if not self._await_cue_window(advice):
+            return self._record(
+                None,
+                job.winner,
+                "superseded-while-holding-cue",
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                corner_idx=job.corner_idx,
+                trace=job.trace,
+            )
+
         self.rate_limiter.record(job.winner.type, now=job.now)
         self.voice.speak(advice)
         self._recent_advice.append((job.winner.type, advice))
@@ -540,6 +557,50 @@ class Advisor:
             corner_idx=job.corner_idx,
             trace=job.trace,
         )
+
+    def _await_cue_window(self, advice: str) -> bool:
+        """Hold until ``advice`` fits before the next corner (duration-aware
+        cue timing). Returns False if a newer corner superseded this one
+        while holding — the advice is stale and must not be spoken.
+
+        Never blocks in sync mode (no worker thread): a held cue there would
+        stall the telemetry receive loop, which is worse than a mistimed
+        line. If no window opens within ``max_hold_s``, speak anyway — on
+        tight esses a perfect window may simply not exist.
+        """
+        sched = self.cue_scheduler
+        if sched is None:
+            return True
+        try:
+            duration = float(self.voice.estimate_duration(advice))
+        except AttributeError:
+            from gt7coach.voice.base import estimate_speech_seconds
+
+            duration = estimate_speech_seconds(advice)
+        if sched.clearance(duration):
+            return True
+        if self._worker_thread is None:
+            return True
+        deadline = time.monotonic() + sched.config.max_hold_s
+        log.info(
+            "cue held: %.1fs of audio doesn't fit before the next corner "
+            "(window=%s); waiting up to %.1fs",
+            duration,
+            f"{sched.seconds_to_next_turn():.1f}s" if sched.seconds_to_next_turn() else "?",
+            sched.config.max_hold_s,
+        )
+        while not self._stop_evt.is_set() and time.monotonic() < deadline:
+            time.sleep(sched.config.poll_s)
+            with self._pending_lock:
+                superseded = self._pending is not None
+            if superseded:
+                log.info("cue dropped: newer corner arrived while holding")
+                return False
+            if sched.clearance(duration):
+                log.debug("cue window opened; speaking")
+                return True
+        log.info("cue window never opened within %.1fs; speaking anyway", sched.config.max_hold_s)
+        return True
 
     # ---- result bookkeeping --------------------------------------------
 

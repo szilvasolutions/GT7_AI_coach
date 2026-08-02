@@ -340,7 +340,12 @@ Shipped after this document's phase log by Phases A–E: Qt GUI
 first-run setup wizard, SHA-256-verified self-updater with rollback,
 receiver stats loop + 16 s disconnect alarm, and VR voice-HUD alerts
 (tyre temp, fuel, coolant, shift, self-delta) with a selectable
-end-of-lap announce mode.
+end-of-lap announce mode. Phase F added duration-aware cue timing
+(`coach/cue_timing.py`): the advisor worker estimates each utterance's
+spoken length and holds it until it can finish `finish_margin_s` before
+the next apex, computed from the matched track polyline + live speed;
+cues superseded mid-hold by a newer corner are dropped, and after
+`max_hold_s` the line is spoken regardless.
 
 Items still out of scope and intentionally so: reference-lap
 comparison (Coach Dave Delta's territory), setup recommendations,

@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from gt7coach.coach.advisor import AdvisorConfig
+from gt7coach.coach.cue_timing import CueTimingConfig
 from gt7coach.coach.rate_limiter import RateLimiterConfig
 from gt7coach.detectors import (
     CornerSegmenterConfig,
@@ -97,6 +98,7 @@ class LoadedConfig:
     voice: VoiceSettings
     session: SessionSettings
     vr_alerts: VRAlertsConfig
+    cue_timing: CueTimingConfig
     detectors_enabled: set[str]
     detector_configs: dict[str, Any]
     coach_provider: str
@@ -130,6 +132,7 @@ def default_config() -> LoadedConfig:
         voice=VoiceSettings(),
         session=SessionSettings(),
         vr_alerts=VRAlertsConfig(),
+        cue_timing=CueTimingConfig(),
         detectors_enabled=set(_DEFAULT_ENABLED),
         detector_configs={
             "braking.late_brake": LateBrakeConfig(),
@@ -185,6 +188,11 @@ def save(cfg: LoadedConfig, path: str | Path) -> None:
             "log_dir": str(cfg.session.log_dir),
             "generate_summary": bool(cfg.session.generate_summary),
             "lap_announce_mode": str(cfg.session.lap_announce_mode),
+        },
+        "cue_timing": {
+            "enabled": bool(cfg.cue_timing.enabled),
+            "finish_margin_s": float(cfg.cue_timing.finish_margin_s),
+            "max_hold_s": float(cfg.cue_timing.max_hold_s),
         },
         "vr_alerts": {
             "tyre_temp_enabled": bool(cfg.vr_alerts.tyre_temp_enabled),
@@ -301,6 +309,13 @@ def _merge(cfg: LoadedConfig, raw: dict[str, Any]) -> LoadedConfig:
             log.warning(
                 "invalid lap_announce_mode %r; keeping %r", mode, cfg.session.lap_announce_mode
             )
+
+    cue = raw.get("cue_timing") or {}
+    if "enabled" in cue:
+        cfg.cue_timing.enabled = bool(cue["enabled"])
+    for cue_key in ("finish_margin_s", "max_hold_s", "poll_s", "min_speed_kmh", "max_offline_m"):
+        if cue_key in cue:
+            setattr(cfg.cue_timing, cue_key, float(cue[cue_key]))
 
     vr = raw.get("vr_alerts") or {}
     for bool_key in (

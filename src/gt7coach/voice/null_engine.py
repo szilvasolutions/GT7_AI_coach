@@ -16,6 +16,13 @@ class NullVoiceEngine:
     def speak(self, text: str) -> None:
         self.spoken.append(text)
 
+    def estimate_duration(self, text: str) -> float:
+        # Mirror a real engine's estimate so log-only replays exercise the
+        # cue scheduler with realistic timings.
+        from gt7coach.voice.base import estimate_speech_seconds
+
+        return estimate_speech_seconds(text)
+
     def interrupt(self, text: str) -> None:
         self.spoken.append(text)
 

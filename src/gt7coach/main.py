@@ -32,6 +32,7 @@ from gt7coach.coach import (
     RateLimiterConfig,
     make_provider,
 )
+from gt7coach.coach.cue_timing import CueScheduler
 from gt7coach.coach.laps import LapTracker
 from gt7coach.config import load as load_config
 from gt7coach.detectors import (
@@ -455,12 +456,18 @@ def main(argv: list[str] | None = None) -> int:
     # SessionLogger registers as the Advisor's on_result callback so the
     # async worker's final AdvisorResult / IncidentResult is what hits
     # coach.jsonl — not the synchronous "queued" stub.
+    # Duration-aware cue timing (Phase F): the advisor's worker delays
+    # voice.speak() so an utterance finishes before the next braking zone.
+    # Armed once a track is detected/forced; inert (always clear) until then.
+    cue_scheduler = CueScheduler(cfg.cue_timing) if cfg.cue_timing.enabled else None
+
     advisor = Advisor(
         provider=provider,
         voice=voice,
         rate_limiter=RateLimiter(rate_limiter_cfg),
         config=advisor_cfg,
         on_result=session.on_advisor_result if session is not None else None,
+        cue_scheduler=cue_scheduler,
     )
 
     # Audible startup confirmation.
@@ -511,6 +518,8 @@ def main(argv: list[str] | None = None) -> int:
         try:
             track = track_detector.force(forced_track)
             advisor.set_track_shape(track.shape_description)
+            if cue_scheduler is not None:
+                cue_scheduler.set_track(track)
         except KeyError as exc:
             log.warning("--track override failed: %s", exc)
 
@@ -529,9 +538,13 @@ def main(argv: list[str] | None = None) -> int:
                 tr = track_detector.feed(packet)
                 if tr is not None:
                     advisor.set_track_shape(tr.shape_description)
+                    if cue_scheduler is not None:
+                        cue_scheduler.set_track(tr)
                     status.emit("track", id=tr.id, name=tr.display_name)
             else:
                 track_detector.feed(packet)  # keeps the sticky-release timer fresh
+            if cue_scheduler is not None:
+                cue_scheduler.feed(packet)
             lap_tracker.feed_packet(packet)
             # VR voice-HUD alerts (tire temp, fuel, coolant, shift, self-delta).
             # Per-packet, deterministic phrases, no LLM call.

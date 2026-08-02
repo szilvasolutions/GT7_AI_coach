@@ -97,6 +97,12 @@ class PiperVoiceEngine:
             self._queue.append(text)
         self._wake.set()
 
+    def estimate_duration(self, text: str) -> float:
+        # Piper's en_US voices land near 170 wpm at default length_scale.
+        from gt7coach.voice.base import estimate_speech_seconds
+
+        return estimate_speech_seconds(text, wpm=170.0)
+
     def interrupt(self, text: str) -> None:
         text = (text or "").strip()
         if not text:
