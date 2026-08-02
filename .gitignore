@@ -66,6 +66,7 @@ htmlcov/
 
 # Build artifacts
 *.spec
+!packaging/*.spec
 dist/
 build/
 
