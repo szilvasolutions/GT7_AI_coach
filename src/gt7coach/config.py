@@ -58,7 +58,10 @@ class SessionSettings:
     # End-of-lap voice mode. "recommendation" = current behaviour (LLM
     # summary), "best_lap" = short PB callout only (no LLM call, free-
     # tier-friendly), "both" = PB callout then LLM summary.
-    lap_announce_mode: str = "both"
+    # Best-lap callout is off by default: with "both" every lap produced two
+    # separate utterances, which reads as a bug. Switch it on in the Config
+    # dialog under "End-of-lap announce".
+    lap_announce_mode: str = "recommendation"
 
 
 @dataclass(slots=True)

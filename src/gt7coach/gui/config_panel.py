@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QSpinBox,
+    QToolTip,
     QVBoxLayout,
     QWidget,
 )
@@ -156,21 +157,41 @@ def _apply_field_help(dialog: QDialog) -> None:
             widget.setToolTip(text)
 
 
-def _help_icon(text: str) -> QLabel:
-    """A round "?" badge carrying ``text`` as its tooltip.
+class _HelpBadge(QLabel):
+    """A round "?" badge that shows its help on hover *and* on click.
 
-    A tooltip on the input alone is invisible until you happen to hover the
-    right pixels — and hovering the label, which is what people actually do,
-    showed nothing at all. The badge is the affordance: you can see there's
-    help before you go looking for it.
+    setToolTip() alone wasn't enough in practice — the badge rendered but
+    hovering it produced nothing on the reporter's machine. Rather than keep
+    guessing at why Qt withheld it, show the text explicitly: enterEvent
+    pops it immediately (no hover delay to wait out), and a click pops it
+    too, so the badge works even where automatic tooltips don't.
     """
-    icon = QLabel("?")
-    icon.setObjectName("helpIcon")
-    icon.setToolTip(text)
-    icon.setCursor(Qt.CursorShape.WhatsThisCursor)
-    icon.setFixedSize(18, 18)
-    icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    return icon
+
+    def __init__(self, text: str) -> None:
+        super().__init__("?")
+        self._help = text
+        self.setObjectName("helpIcon")
+        self.setToolTip(text)
+        self.setCursor(Qt.CursorShape.WhatsThisCursor)
+        self.setFixedSize(18, 18)
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+    def _popup(self) -> None:
+        # Anchor below the badge so the text never sits under the cursor.
+        QToolTip.showText(self.mapToGlobal(self.rect().bottomLeft()), self._help, self)
+
+    def enterEvent(self, event) -> None:
+        self._popup()
+        super().enterEvent(event)
+
+    def mousePressEvent(self, event) -> None:
+        self._popup()
+        super().mousePressEvent(event)
+
+
+def _help_icon(text: str) -> QLabel:
+    """A "?" badge for ``text`` — see :class:`_HelpBadge`."""
+    return _HelpBadge(text)
 
 
 def _read_env_file(path: Path) -> dict[str, str]:

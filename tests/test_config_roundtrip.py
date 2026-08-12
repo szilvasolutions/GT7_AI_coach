@@ -80,8 +80,8 @@ def test_invalid_lap_announce_mode_falls_back_to_default(tmp_path: Path) -> None
     path = tmp_path / "bad.yaml"
     path.write_text("session:\n  lap_announce_mode: nonsense\n", encoding="utf-8")
     cfg = load(path)
-    # Default is "both" — we kept it because the YAML value was rejected.
-    assert cfg.session.lap_announce_mode == "both"
+    # Whatever the default is, a rejected YAML value must not change it.
+    assert cfg.session.lap_announce_mode == default_config().session.lap_announce_mode
 
 
 def test_save_includes_piper_settings_only_for_piper(tmp_path: Path) -> None:

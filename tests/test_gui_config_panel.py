@@ -144,3 +144,29 @@ def test_saved_config_still_wins_over_the_env_guess(qapp, tmp_path):
 
     again = ConfigDialog(path=path)
     assert again._provider.currentText() == "openai"
+
+
+def test_help_badge_shows_its_text_on_click(qapp, tmp_path):
+    """setToolTip alone didn't surface on the reporter's machine, so the
+    badge pops the text explicitly. Clicking must put it on screen."""
+    from PySide6.QtCore import QPoint
+    from PySide6.QtCore import Qt as _Qt
+    from PySide6.QtGui import QMouseEvent
+    from PySide6.QtWidgets import QToolTip
+
+    from gt7coach.gui.config_panel import _HelpBadge
+
+    badge = _HelpBadge("<b>PS5 IP</b><br>leave it on auto")
+    badge.show()
+    qapp.processEvents()
+    ev = QMouseEvent(
+        QMouseEvent.Type.MouseButtonPress,
+        QPoint(5, 5),
+        _Qt.MouseButton.LeftButton,
+        _Qt.MouseButton.LeftButton,
+        _Qt.KeyboardModifier.NoModifier,
+    )
+    badge.mousePressEvent(ev)
+    qapp.processEvents()
+    assert QToolTip.text() == "<b>PS5 IP</b><br>leave it on auto"
+    QToolTip.hideText()

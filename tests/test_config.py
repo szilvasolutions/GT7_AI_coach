@@ -91,3 +91,15 @@ def test_main_ignores_foreign_cwd_config(tmp_path, monkeypatch, capsys):
     # It must fail on the missing key/source, not on the foreign config.
     assert rc != 0
     assert "ConstructorError" not in err
+
+
+def test_lap_announce_defaults_to_single_utterance():
+    """'both' spoke a best-lap callout AND an AI line every lap, which reads
+    as a double announcement. Default to one; 'both' stays available."""
+    assert config.default_config().session.lap_announce_mode == "recommendation"
+
+
+def test_lap_announce_mode_still_configurable(tmp_path):
+    p = tmp_path / "config.yaml"
+    p.write_text("session:\n  lap_announce_mode: both\n", encoding="utf-8")
+    assert config.load(p).session.lap_announce_mode == "both"
