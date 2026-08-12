@@ -156,6 +156,23 @@ def _apply_field_help(dialog: QDialog) -> None:
             widget.setToolTip(text)
 
 
+def _help_icon(text: str) -> QLabel:
+    """A round "?" badge carrying ``text`` as its tooltip.
+
+    A tooltip on the input alone is invisible until you happen to hover the
+    right pixels — and hovering the label, which is what people actually do,
+    showed nothing at all. The badge is the affordance: you can see there's
+    help before you go looking for it.
+    """
+    icon = QLabel("?")
+    icon.setObjectName("helpIcon")
+    icon.setToolTip(text)
+    icon.setCursor(Qt.CursorShape.WhatsThisCursor)
+    icon.setFixedSize(18, 18)
+    icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    return icon
+
+
 def _read_env_file(path: Path) -> dict[str, str]:
     """Parse a very simple .env (KEY=value lines, no quoting). Returns
     an empty dict if the file doesn't exist or is unreadable."""
@@ -230,6 +247,18 @@ class ConfigDialog(QDialog):
         # displaying the value.
         self._env_values = _read_env_file(self._env_path)
 
+        # On a fresh install there's no config.yaml, so the provider would
+        # fall back to the built-in default (anthropic) and the dialog would
+        # ask for an ANTHROPIC_API_KEY while the user's Gemini key sat right
+        # there in .env — which reads as "my key vanished". Start on a
+        # provider they actually have a key for.
+        if not self._path.is_file():
+            for name in _PROVIDER_CHOICES:
+                var = _PROVIDER_ENV_VAR.get(name)
+                if var and self._env_values.get(var):
+                    self._cfg.coach_provider = name
+                    break
+
         # --- form fields --------------------------------------------------
         self._ps5_ip = QLineEdit(self._cfg.network.ps5_ip or "auto")
         self._provider = QComboBox()
@@ -302,10 +331,10 @@ class ConfigDialog(QDialog):
         # --- layout -------------------------------------------------------
         form = QFormLayout()
         _apply_field_help(self)
-        form.addRow("PS5 IP:", self._ps5_ip)
+        self._add_row(form, "PS5 IP:", self._ps5_ip, "_ps5_ip")
         form.addRow(QLabel("<b>Coach</b>"))
-        form.addRow("Provider:", self._provider)
-        form.addRow("Model override:", self._model)
+        self._add_row(form, "Provider:", self._provider, "_provider")
+        self._add_row(form, "Model override:", self._model, "_model")
 
         # API key row — line edit + Show checkbox in the same cell.
         from PySide6.QtWidgets import QHBoxLayout
@@ -316,7 +345,7 @@ class ConfigDialog(QDialog):
         key_layout.setSpacing(6)
         key_layout.addWidget(self._api_key, stretch=1)
         key_layout.addWidget(self._show_key)
-        form.addRow("API key:", key_row)
+        self._add_row(form, "API key:", key_row, "_api_key")
         disclaimer = QLabel(
             "<i>Your API key is private. It is stored only on this PC in <code>.env</code> "
             "and sent only to the chosen provider's official endpoint. "
@@ -327,16 +356,16 @@ class ConfigDialog(QDialog):
         disclaimer.setTextFormat(Qt.TextFormat.RichText)
         form.addRow("", disclaimer)
 
-        form.addRow("Driver style:", self._driver_style)
-        form.addRow("Car class:", self._car_class)
-        form.addRow("Force track id:", self._track)
-        form.addRow("Cooldown between advice:", self._cooldown)
+        self._add_row(form, "Driver style:", self._driver_style, "_driver_style")
+        self._add_row(form, "Car class:", self._car_class, "_car_class")
+        self._add_row(form, "Force track id:", self._track, "_track")
+        self._add_row(form, "Cooldown between advice:", self._cooldown, "_cooldown")
         form.addRow(QLabel("<b>Voice</b>"))
-        form.addRow("Engine:", self._voice_engine)
-        form.addRow("Rate:", self._voice_speed)
+        self._add_row(form, "Engine:", self._voice_engine, "_voice_engine")
+        self._add_row(form, "Rate:", self._voice_speed, "_voice_speed")
         form.addRow(QLabel("<b>Session</b>"))
-        form.addRow("Log directory:", self._log_dir)
-        form.addRow("", self._generate_summary)
+        self._add_row(form, "Log directory:", self._log_dir, "_log_dir")
+        self._add_row(form, "", self._generate_summary, "_generate_summary")
         form.addRow("End-of-lap announce:", self._lap_announce_mode)
         form.addRow(QLabel("<b>VR Alerts</b>  (selectable voice-HUD callouts)"))
         form.addRow("", self._vr_tyre)
@@ -358,6 +387,26 @@ class ConfigDialog(QDialog):
         path_hint.setTextFormat(Qt.TextFormat.RichText)
         outer.addWidget(path_hint)
         outer.addWidget(buttons)
+
+    def _add_row(self, form: QFormLayout, label: str, widget: QWidget, attr: str) -> None:
+        """Add a form row with a "?" badge, and the same help on the label."""
+        help_text = _FIELD_HELP.get(attr, "")
+        if not help_text:
+            form.addRow(label, widget)
+            return
+
+        from PySide6.QtWidgets import QHBoxLayout
+
+        cell = QWidget()
+        row = QHBoxLayout(cell)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(6)
+        row.addWidget(widget, stretch=1)
+        row.addWidget(_help_icon(help_text))
+
+        label_widget = QLabel(label)
+        label_widget.setToolTip(help_text)  # hovering the label is what people try first
+        form.addRow(label_widget, cell)
 
     def _refresh_api_key_placeholder(self) -> None:
         """Update the field placeholder + behavior based on the chosen

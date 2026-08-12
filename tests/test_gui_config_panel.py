@@ -107,3 +107,40 @@ def test_saving_keeps_an_existing_key_when_left_blank(qapp, tmp_path):
 
     body = (tmp_path / ".env").read_text(encoding="utf-8")
     assert "AIzaSy-original-key-value" in body, "leaving the field blank wiped the key"
+
+
+def test_every_field_has_a_visible_help_badge(qapp, tmp_path):
+    """A tooltip on the input alone was invisible in practice — people hover
+    the label. Every documented field needs a "?" badge AND a label tooltip."""
+    from PySide6.QtWidgets import QLabel
+
+    dlg = ConfigDialog(path=tmp_path / "config.yaml")
+    badges = [w for w in dlg.findChildren(QLabel) if w.objectName() == "helpIcon" and w.toolTip()]
+    assert len(badges) == len(_FIELD_HELP), (
+        f"expected one ? badge per documented field ({len(_FIELD_HELP)}), got {len(badges)}"
+    )
+    labelled = [w.toolTip() for w in dlg.findChildren(QLabel) if w.toolTip()]
+    assert any("IP address of your PS4/PS5" in t for t in labelled), (
+        "the row label should carry the same help as the badge"
+    )
+
+
+def test_fresh_install_starts_on_a_provider_you_have_a_key_for(qapp, tmp_path):
+    """No config.yaml + a Gemini key in .env must not open on anthropic and
+    ask for a key the user never had."""
+    (tmp_path / ".env").write_text("GEMINI_API_KEY=AIzaSy-test-key\n", encoding="utf-8")
+    dlg = ConfigDialog(path=tmp_path / "config.yaml")
+    assert dlg._provider.currentText() == "gemini"
+    assert "•" in dlg._api_key.placeholderText()
+
+
+def test_saved_config_still_wins_over_the_env_guess(qapp, tmp_path):
+    """The guess is only for a fresh install; an explicit choice must stick."""
+    path = tmp_path / "config.yaml"
+    first = ConfigDialog(path=path)
+    first._provider.setCurrentText("openai")
+    first._save_and_close()
+    (tmp_path / ".env").write_text("GEMINI_API_KEY=AIzaSy-test-key\n", encoding="utf-8")
+
+    again = ConfigDialog(path=path)
+    assert again._provider.currentText() == "openai"

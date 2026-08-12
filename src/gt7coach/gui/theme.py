@@ -150,6 +150,22 @@ QGroupBox::title {{
 }}
 QGroupBox QLabel {{ background: transparent; }}
 
+/* Round "?" badge next to each Config dialog field. Visible enough to
+   invite a hover, quiet enough not to compete with the inputs. */
+QLabel#helpIcon {{
+    background: {SURFACE_ALT};
+    color: {TEXT_DIM};
+    border: 1px solid {BORDER};
+    border-radius: 9px;
+    font-weight: bold;
+    font-size: 10pt;
+}}
+QLabel#helpIcon:hover {{
+    background: {ACCENT};
+    color: {TEXT};
+    border-color: {ACCENT};
+}}
+
 /* ---- Console -------------------------------------------------------- */
 QWidget#consolePanel {{
     background: {CONSOLE_BG};
