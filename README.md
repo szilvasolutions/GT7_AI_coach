@@ -4,13 +4,20 @@
 
 > ## 🖥️ Just want to use it on Windows?
 >
-> **Download → [`GT7Coach-win64.zip`](https://github.com/szilvasolutions/GT7_AI_coach/releases/latest)**
-> → unzip → open the `GT7Coach` folder → run **`GT7Coach.exe`**.
-> No Python, no install, nothing to build.
+> ### ➡️ [**Download `GT7Coach.exe`**](https://github.com/szilvasolutions/GT7_AI_coach/releases/latest/download/GT7Coach.exe) ⬅️
 >
-> ⚠️ The green **Code ▸ Download ZIP** button does **not** give you the app —
-> that's the source code. If you already downloaded it, just double-click
-> **`!INSTALL-WINDOWS-APP.bat`** inside it and the app downloads itself.
+> One file. Double-click it and the coach opens. No install, no unzip,
+> no Python. (Windows will say it's from an unknown publisher — click
+> *More info* ▸ *Run anyway*. First launch takes ~10 s while it unpacks.)
+>
+> Prefer it to start instantly? Take `GT7Coach-vX.Y.Z-win64.zip` from the
+> same [releases page](https://github.com/szilvasolutions/GT7_AI_coach/releases/latest)
+> instead, unzip it and run `GT7Coach\GT7Coach.exe` — same app, faster
+> startup, and it can update itself.
+>
+> ⚠️ The green **Code ▸ Download ZIP** button gives you the *source code*,
+> not the app. If you already grabbed it, double-click
+> **`!INSTALL-WINDOWS-APP.bat`** inside and it fetches the app for you.
 
 Open-source real-time AI driving coach for **Gran Turismo 7** on PS4 / PS5.
 

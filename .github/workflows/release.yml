@@ -52,6 +52,31 @@ jobs:
         run: |
           pyinstaller --noconfirm packaging/gt7coach.spec
 
+      - name: Build the single-file GT7Coach.exe
+        shell: pwsh
+        run: |
+          # Separate work/dist dirs so this build can't clobber the
+          # single-folder one (both produce a "GT7Coach" name).
+          pyinstaller --noconfirm --distpath dist-onefile --workpath build-onefile `
+                      packaging/gt7coach-onefile.spec
+          $exe = "dist-onefile/GT7Coach.exe"
+          if (-not (Test-Path $exe)) { throw "one-file GT7Coach.exe not produced" }
+          $mb = [math]::Round((Get-Item $exe).Length / 1MB, 1)
+          echo "one-file exe is $mb MB"
+
+      - name: Smoke-test the single-file exe
+        shell: pwsh
+        run: |
+          # Unpacks ~230 MB to %TEMP% before the window appears, so give it
+          # longer than the folder build gets.
+          $proc = Start-Process -FilePath "dist-onefile/GT7Coach.exe" -PassThru -WindowStyle Hidden
+          Start-Sleep -Seconds 45
+          if ($proc.HasExited -and $proc.ExitCode -ne 0) {
+            throw "one-file GT7Coach.exe exited early with code $($proc.ExitCode)"
+          }
+          Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+          echo "one-file smoke ok"
+
       - name: Build updater.exe
         shell: pwsh
         run: |
@@ -98,10 +123,13 @@ jobs:
       - name: Compute SHA-256
         shell: pwsh
         run: |
+          $lines = @()
           $hash = (Get-FileHash -Algorithm SHA256 -Path $env:ZIP_PATH).Hash.ToLower()
-          $line = "$hash *$env:ZIP_NAME"
-          $line | Out-File -FilePath dist/SHA256SUMS.txt -Encoding ascii
-          echo "Computed SHA256: $hash"
+          $lines += "$hash *$env:ZIP_NAME"
+          $exeHash = (Get-FileHash -Algorithm SHA256 -Path dist-onefile/GT7Coach.exe).Hash.ToLower()
+          $lines += "$exeHash *GT7Coach.exe"
+          $lines | Out-File -FilePath dist/SHA256SUMS.txt -Encoding ascii
+          echo "Computed SHA256: zip=$hash exe=$exeHash"
 
       - name: Upload artifacts to release
         uses: softprops/action-gh-release@v2
@@ -114,5 +142,6 @@ jobs:
           draft: false
           generate_release_notes: true
           files: |
+            dist-onefile/GT7Coach.exe
             ${{ env.ZIP_PATH }}
             dist/SHA256SUMS.txt
