@@ -629,6 +629,10 @@ def main(argv: list[str] | None = None) -> int:
                 track_detector.feed(packet)  # keeps the sticky-release timer fresh
             if cue_scheduler is not None:
                 cue_scheduler.feed(packet)
+            # Learn what this car can actually do. Every on-track frame counts,
+            # not just corners, so the limit is known before the first corner
+            # that needs judging.
+            advisor.grip_envelope.feed(packet)
             lap_tracker.feed_packet(packet)
             # VR voice-HUD alerts (tire temp, fuel, coolant, shift, self-delta).
             # Per-packet, deterministic phrases, no LLM call.

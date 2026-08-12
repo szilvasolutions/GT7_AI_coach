@@ -250,6 +250,36 @@ def build_user_prompt(
     corner_line += f", yaw {context.total_yaw_deg:.0f}°, duration {context.duration_s:.1f}s."
     blocks.append(corner_line)
 
+    # Grip utilisation is the one number that says whether the corner was
+    # actually driven near the car's limit. Everything else describes what
+    # happened; this says whether it was good enough.
+    if context.grip_used is not None:
+        grip_line = f"Grip used: {context.grip_used * 100:.0f}% of what this car can deliver"
+        if context.grip_weakest_phase and context.grip_used < 0.92:
+            grip_line += f", least on {context.grip_weakest_phase}"
+        blocks.append(grip_line + ".")
+
+    shape_bits = []
+    if context.balance is not None:
+        if context.balance > 1.12:
+            shape_bits.append("car rotating more than the grip supports (loose)")
+        elif context.balance < 0.88:
+            shape_bits.append("car pushing wide (understeer)")
+    if context.apex_position is not None and context.apex_position < 0.35:
+        shape_bits.append("slowest point reached early, before the apex")
+    if context.elevation_change_m <= -5.0:
+        shape_bits.append(f"downhill {abs(context.elevation_change_m):.0f} m")
+    elif context.elevation_change_m >= 5.0:
+        shape_bits.append(f"uphill {context.elevation_change_m:.0f} m")
+    if context.front_slip is not None and context.front_slip < 0.90:
+        shape_bits.append(
+            f"front tyres slipping {(1 - context.front_slip) * 100:.0f}% under brakes"
+        )
+    if context.rear_slip is not None and context.rear_slip > 1.06:
+        shape_bits.append(f"rear tyres spinning {(context.rear_slip - 1) * 100:.0f}% on power")
+    if shape_bits:
+        blocks.append("Also: " + "; ".join(shape_bits) + ".")
+
     if context.tyre_state:
         blocks.append(f"Tyres: {context.tyre_state}.")
 

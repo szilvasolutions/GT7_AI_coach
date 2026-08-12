@@ -167,6 +167,15 @@ class CornerContext:
     # Session context (set per session, threaded through here for prompt assembly):
     car_class: str = ""
     track_shape: str = ""
+    # Grip utilisation — the absolute reference. None until the car has shown
+    # us its limit (see gt7coach.coach.grip.GripEnvelope).
+    grip_used: float | None = None
+    grip_weakest_phase: str | None = None
+    balance: float | None = None
+    apex_position: float | None = None
+    elevation_change_m: float = 0.0
+    front_slip: float | None = None
+    rear_slip: float | None = None
 
     @classmethod
     def from_trace(
@@ -176,7 +185,17 @@ class CornerContext:
         best_lap_ms: int = -1,
         car_class: str = "",
         track_shape: str = "",
+        envelope: object | None = None,
     ) -> CornerContext:
+        grip_used = weakest = None
+        if envelope is not None:
+            from gt7coach.coach.grip import corner_grip
+
+            cg = corner_grip(trace, envelope)  # type: ignore[arg-type]
+            grip_used, weakest = cg.overall, cg.weakest_phase
+        from gt7coach.coach.grip import apex_position, axle_slip, balance, elevation_change_m
+
+        front, rear = axle_slip(trace)
         return cls(
             peak_lat_g=round(trace.peak_lat_g, 2),
             min_speed_kmh=round(trace.min_speed_kmh, 1),
@@ -195,6 +214,13 @@ class CornerContext:
             best_lap_ms=best_lap_ms,
             car_class=car_class,
             track_shape=track_shape,
+            grip_used=grip_used,
+            grip_weakest_phase=weakest,
+            balance=balance(trace),
+            apex_position=apex_position(trace),
+            elevation_change_m=round(elevation_change_m(trace), 1),
+            front_slip=front,
+            rear_slip=rear,
         )
 
 
@@ -312,6 +338,11 @@ class Advisor:
         self._recent_events: deque[tuple[str, str]] = deque(maxlen=_RECENT_EVENTS_DEPTH)
         # Async worker bookkeeping:
         self._pending: _PendingJob | None = None
+        # The car's demonstrated grip limit, learned as the session runs. This
+        # is the coach's absolute reference — see gt7coach.coach.grip.
+        from gt7coach.coach.grip import GripEnvelope
+
+        self.grip_envelope = GripEnvelope()
         self._pending_lock = threading.Lock()
         self._wake = threading.Event()
         self._stop_evt = threading.Event()
@@ -517,6 +548,7 @@ class Advisor:
             best_lap_ms=self._best_lap_ms,
             car_class=self.config.car_class,
             track_shape=self.config.track_shape,
+            envelope=self.grip_envelope,
         )
         user_prompt = build_user_prompt(
             job.top,
