@@ -1,5 +1,14 @@
 # GT7 AI Coach
 
+[![Latest release](https://img.shields.io/github/v/release/szilvasolutions/GT7_AI_coach?label=download&color=2ea043)](https://github.com/szilvasolutions/GT7_AI_coach/releases/latest)
+
+> **🖥️ Windows user? You don't need Python or this source code.**
+> Grab **`GT7Coach-vX.Y.Z-win64.zip`** from the
+> [**latest release**](https://github.com/szilvasolutions/GT7_AI_coach/releases/latest),
+> unzip it, open the `GT7Coach` folder and run **`GT7Coach.exe`**. Done.
+> (The green *Code ▸ Download ZIP* button gives you the source code only —
+> there is no exe in it.)
+
 Open-source real-time AI driving coach for **Gran Turismo 7** on PS4 / PS5.
 
 The coach reads the unofficial UDP telemetry stream from the console, detects
