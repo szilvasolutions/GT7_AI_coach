@@ -49,6 +49,16 @@ _FIELD_DEFAULTS: dict[str, int | float] = {
     "rev_light_min": 0,
     "rev_light_max": 0,
     "time_of_day_ms": 0,
+    # Added after the first real captures were recorded; a CSV without these
+    # columns must still replay.
+    "tyre_radius_fl": 0.0,
+    "tyre_radius_fr": 0.0,
+    "tyre_radius_rl": 0.0,
+    "tyre_radius_rr": 0.0,
+    "ride_height": 0.0,
+    "roll_rate": 0.0,
+    "pitch_rate": 0.0,
+    "steer_rate": 0.0,
 }
 
 

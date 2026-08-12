@@ -159,9 +159,60 @@ class Packet:
     # Misc (preserved so detectors don't need to re-parse)
     flags: int
 
+    # Channels whose offsets were documented above from the start but never
+    # extracted. The tyre radii matter most: they turn wheel rotation into an
+    # exact slip ratio, which previously had to be solved for by fitting a
+    # radius against straight-line data. Defaulted so replaying a CSV recorded
+    # before they existed still works.
+    tyre_radius_fl: float = 0.0
+    tyre_radius_fr: float = 0.0
+    tyre_radius_rl: float = 0.0
+    tyre_radius_rr: float = 0.0
+    ride_height: float = 0.0
+    roll_rate: float = 0.0  # angular velocity about the longitudinal axis
+    pitch_rate: float = 0.0  # ...and about the lateral axis
+    steer_rate: float = 0.0  # B-format only; 0.0 on an A-format packet
+
     @property
     def speed_kmh(self) -> float:
         return self.speed_mps * 3.6
+
+    # ---- slip ratios ------------------------------------------------------
+    # >1 means the wheel is outrunning the car (spinning under power); <1 means
+    # it is turning slower than the car is moving (locking under braking).
+    # Both return None when the radius is unknown (old capture) or the car is
+    # too slow for the ratio to mean anything.
+
+    def _axle_slip(self, rps_l: float, rps_r: float, rad_l: float, rad_r: float) -> float | None:
+        if self.speed_mps < 3.0 or rad_l <= 0.0 or rad_r <= 0.0:
+            return None
+        surface = (abs(rps_l) * rad_l + abs(rps_r) * rad_r) / 2.0
+        return surface / self.speed_mps
+
+    @property
+    def front_slip(self) -> float | None:
+        return self._axle_slip(
+            self.wheel_speed_fl, self.wheel_speed_fr, self.tyre_radius_fl, self.tyre_radius_fr
+        )
+
+    @property
+    def rear_slip(self) -> float | None:
+        return self._axle_slip(
+            self.wheel_speed_rl, self.wheel_speed_rr, self.tyre_radius_rl, self.tyre_radius_rr
+        )
+
+    @property
+    def combined_g(self) -> float:
+        """Total grip the tyres are delivering — the traction-circle radius.
+
+        The reference a beginner actually needs: compared against the car's own
+        demonstrated peak it answers "how much of the available grip did I use
+        through there", which needs no reference lap and stays valid on a
+        compromised line in traffic.
+        """
+        lat = (self.accel_lat or 0.0) / 9.80665
+        lon = (self.accel_long or 0.0) / 9.80665
+        return (lat * lat + lon * lon) ** 0.5
 
 
 # Pre-compiled struct for the contiguous A-format float block we care about.
@@ -227,6 +278,16 @@ def parse_packet(buf: bytes, recv_time: float | None = None) -> Packet:
         rev_light_max=_U16.unpack_from(buf, _OFF_REV_LIGHT_MAX)[0],
         time_of_day_ms=_U32.unpack_from(buf, _OFF_TIME_OF_DAY)[0],
         flags=_U16.unpack_from(buf, _OFF_FLAGS)[0],
+        tyre_radius_fl=_f32(buf, _OFF_TYRE_RADIUS_FL),
+        tyre_radius_fr=_f32(buf, _OFF_TYRE_RADIUS_FR),
+        tyre_radius_rl=_f32(buf, _OFF_TYRE_RADIUS_RL),
+        tyre_radius_rr=_f32(buf, _OFF_TYRE_RADIUS_RR),
+        ride_height=_f32(buf, _OFF_RIDE_HEIGHT),
+        roll_rate=_f32(buf, _OFF_ANG_VEL_X),
+        pitch_rate=_f32(buf, _OFF_ANG_VEL_Z),
+        steer_rate=(
+            _f32(buf, _OFF_STEER_RATE_RAD_PER_SEC) if len(buf) >= B_FORMAT_MIN_SIZE else 0.0
+        ),
     )
 
 

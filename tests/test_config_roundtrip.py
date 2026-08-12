@@ -103,3 +103,19 @@ def test_save_includes_piper_settings_only_for_piper(tmp_path: Path) -> None:
     text2 = path2.read_text(encoding="utf-8")
     assert "piper_voice" not in text2
     assert "piper_model_path" not in text2
+
+
+def test_track_radii_are_measured_not_placeholders():
+    """tracks.json ships two distinct turning_radius_m values across all 84
+    tracks (11.3 and 25.3) — placeholder data. They must be measured from the
+    polyline instead, or every corner looks like a hairpin."""
+    from gt7coach.tracks.database import load_default_tracks
+
+    tracks = load_default_tracks()
+    radii = {round(t.turning_radius_m, 1) for tr in tracks.values() for t in tr.turns}
+    assert len(radii) > 20, f"radii still look like placeholders: {sorted(radii)}"
+
+    deep_forest = tracks["DeepForestRaceway"]
+    by_radius = sorted(t.turning_radius_m for t in deep_forest.turns)
+    assert by_radius[0] < 45, "the hairpin should measure well under 45 m"
+    assert by_radius[-1] > 150, "the fast kink should measure well over 150 m"

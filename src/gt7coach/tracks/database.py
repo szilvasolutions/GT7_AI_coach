@@ -13,6 +13,7 @@ both zetetos's kaitai schema and Nenkai's PDTools).
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
@@ -84,18 +85,49 @@ def _load_database_path() -> Path:
     return Path(__file__).resolve().parent / "data" / "tracks.json"
 
 
+def _menger_radius(
+    poly: list[dict], idx: int, *, span: int = 4, cap_m: float = 2000.0
+) -> float | None:
+    """Circumradius through three polyline points centred on ``idx``.
+
+    ``cap_m`` folds anything straighter than a very long sweeper down to None —
+    a circumradius through three nearly-collinear points is arbitrarily large
+    and means "straight", not "a 40 km corner".
+    """
+    n = len(poly)
+    if n < 2 * span + 1:
+        return None
+    a, b, c = poly[(idx - span) % n], poly[idx % n], poly[(idx + span) % n]
+    ab = math.dist((a["x"], a["z"]), (b["x"], b["z"]))
+    bc = math.dist((b["x"], b["z"]), (c["x"], c["z"]))
+    ac = math.dist((a["x"], a["z"]), (c["x"], c["z"]))
+    area = abs((b["x"] - a["x"]) * (c["z"] - a["z"]) - (c["x"] - a["x"]) * (b["z"] - a["z"])) / 2.0
+    if area < 1e-9:
+        return None
+    r = (ab * bc * ac) / (4.0 * area)
+    return None if r > cap_m else r
+
+
 def _track_from_record(rec: dict) -> Track:
     bbox = rec["bbox"]
     polyline = rec["polyline"]
-    turns = [
-        Turn(
-            index=t["index"],
-            x=t["x"],
-            z=t["z"],
-            turning_radius_m=t["turning_radius_m"],
+    # The database's own turning_radius_m is placeholder data: across all 84
+    # tracks it only ever holds two distinct values (11.3 and 25.3), and every
+    # corner of Deep Forest claims 11.3 m. The polyline is real, so measure the
+    # radius from it and keep the stored value only as a fallback.
+    turns = []
+    for t in rec.get("turns", []):
+        measured = _menger_radius(polyline, t["index"])
+        turns.append(
+            Turn(
+                index=t["index"],
+                x=t["x"],
+                z=t["z"],
+                turning_radius_m=(
+                    measured if measured is not None else t.get("turning_radius_m", 0.0)
+                ),
+            )
         )
-        for t in rec.get("turns", [])
-    ]
     return Track(
         id=rec["id"],
         display_name=rec["display_name"],

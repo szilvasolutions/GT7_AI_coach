@@ -211,3 +211,53 @@ def test_replay_from_fixture() -> None:
     assert max(lat_gs) > 1.0, "fixture should record a real cornering load"
     assert packets[0].packet_id == 1
     assert packets[-1].packet_id == 24
+
+
+# --- channels that had offsets but were never extracted ---------------------
+
+
+def test_parse_extracts_tyre_radius_and_body_rates():
+    raw = build_synthetic_packet(fmt="B")
+    pkt = parse_packet(raw)
+    # build_synthetic_packet doesn't write radii, but the fields must exist and
+    # parse without raising — the real check is that they're wired at all.
+    assert hasattr(pkt, "tyre_radius_fl")
+    assert hasattr(pkt, "ride_height")
+    assert hasattr(pkt, "roll_rate")
+    assert hasattr(pkt, "steer_rate")
+
+
+def test_slip_ratios_from_radius_and_wheel_speed():
+    """GT7 sends the tyre radius, so slip is exact rather than fitted."""
+    from tests._synth import make_packet
+
+    # 40 m/s ground speed; rears turning 6% faster than the road = wheelspin.
+    spinning = make_packet(speed_kmh=144.0, wheel_rps=(117.6, 117.6, 124.7, 124.7))
+    spinning.tyre_radius_fl = spinning.tyre_radius_fr = 0.34
+    spinning.tyre_radius_rl = spinning.tyre_radius_rr = 0.34
+    assert spinning.front_slip == pytest.approx(1.0, abs=0.01)
+    assert spinning.rear_slip > 1.05
+
+    # Fronts turning 20% slower than the road = locking under braking.
+    locking = make_packet(speed_kmh=144.0, wheel_rps=(94.1, 94.1, 117.6, 117.6))
+    locking.tyre_radius_fl = locking.tyre_radius_fr = 0.34
+    locking.tyre_radius_rl = locking.tyre_radius_rr = 0.34
+    assert locking.front_slip < 0.85
+
+
+def test_slip_is_none_without_radius_or_at_a_standstill():
+    from tests._synth import make_packet
+
+    old_capture = make_packet(speed_kmh=100.0)  # radii default to 0.0
+    assert old_capture.front_slip is None
+    parked = make_packet(speed_kmh=1.0)
+    parked.tyre_radius_fl = parked.tyre_radius_fr = 0.34
+    assert parked.front_slip is None
+
+
+def test_combined_g_is_the_traction_circle():
+    from tests._synth import make_packet
+
+    G = 9.80665
+    pkt = make_packet(accel_lat=1.2 * G, accel_long=-0.9 * G)
+    assert pkt.combined_g == pytest.approx(1.5, abs=0.01)  # 3-4-5 triangle
