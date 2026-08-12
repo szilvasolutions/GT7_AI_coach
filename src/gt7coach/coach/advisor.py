@@ -613,11 +613,13 @@ class Advisor:
         if self._worker_thread is None:
             return True
         deadline = time.monotonic() + sched.config.max_hold_s
+        # Query once — the telemetry thread can flip it to None between calls.
+        window_s = sched.seconds_to_next_turn()
         log.info(
             "cue held: %.1fs of audio doesn't fit before the next corner "
             "(window=%s); waiting up to %.1fs",
             duration,
-            f"{sched.seconds_to_next_turn():.1f}s" if sched.seconds_to_next_turn() else "?",
+            f"{window_s:.1f}s" if window_s is not None else "?",
             sched.config.max_hold_s,
         )
         while not self._stop_evt.is_set() and time.monotonic() < deadline:

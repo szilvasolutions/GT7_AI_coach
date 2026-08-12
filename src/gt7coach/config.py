@@ -189,6 +189,15 @@ def save(cfg: LoadedConfig, path: str | Path) -> None:
             "generate_summary": bool(cfg.session.generate_summary),
             "lap_announce_mode": str(cfg.session.lap_announce_mode),
         },
+        "detectors": {
+            "enabled": sorted(cfg.detectors_enabled),
+            "thresholds": {
+                "corner_min_speed_kmh": float(cfg.corner.min_speed_kmh),
+                "corner_entry_brake": int(cfg.corner.entry_brake),
+                "corner_entry_lat_g": float(cfg.corner.entry_lat_g),
+                "corner_min_dwell_s": float(cfg.corner.min_dwell_s),
+            },
+        },
         "cue_timing": {
             "enabled": bool(cfg.cue_timing.enabled),
             "finish_margin_s": float(cfg.cue_timing.finish_margin_s),
@@ -282,7 +291,9 @@ def _merge(cfg: LoadedConfig, raw: dict[str, Any]) -> LoadedConfig:
         cfg.voice.piper_model_path = str(voice["piper_model_path"])
 
     detectors = raw.get("detectors") or {}
-    if "enabled" in detectors:
+    # `enabled:` left empty in YAML parses as None — keep the defaults then,
+    # rather than crashing (or silently disabling every detector).
+    if detectors.get("enabled") is not None:
         cfg.detectors_enabled = set(detectors["enabled"])
     thresholds = detectors.get("thresholds") or {}
     if "corner_min_speed_kmh" in thresholds:

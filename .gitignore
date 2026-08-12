@@ -81,3 +81,4 @@ VOICE/
 # Live capture dumps (binary + CSV + metadata)
 captures/
 core.*
+config.yaml
