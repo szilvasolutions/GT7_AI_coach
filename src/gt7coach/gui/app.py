@@ -606,6 +606,16 @@ def _init_gui_logging(verbose: bool) -> Path:
 
 
 def main(argv: list[str] | None = None) -> int:
+    argv = list(sys.argv[1:]) if argv is None else argv
+    # Frozen-bundle dispatch: inside the PyInstaller bundle there is no
+    # python.exe, so CoachRunner re-launches THIS executable with
+    # --run-coach to start a session. Route that straight to the coach CLI
+    # before any GUI setup happens.
+    if argv[:1] == ["--run-coach"]:
+        from gt7coach.main import main as coach_main
+
+        return coach_main(argv[1:])
+
     p = argparse.ArgumentParser(prog="gt7coach-gui", description="GT7 AI Coach GUI")
     p.add_argument("-v", "--verbose", action="store_true")
     args = p.parse_args(argv)

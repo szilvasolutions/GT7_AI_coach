@@ -299,3 +299,41 @@ def test_stderr_mirrored_to_sys_stderr(qapp, tmp_path, monkeypatch, capsys) -> N
     # And sys.stderr saw a copy with the prefix.
     captured = capsys.readouterr().err
     assert "[coach] HELLO FROM COACH" in captured
+
+
+def test_frozen_bundle_start_uses_run_coach_flag(qapp, monkeypatch) -> None:
+    """In a PyInstaller bundle sys.executable IS the GUI exe, so start()
+    must pass --run-coach instead of -m gt7coach.main. Regression for the
+    v0.1.0 blocker where every Start in the shipped exe relaunched the GUI
+    and died on its argparse."""
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+
+    r = CoachRunner()
+    r.start(CoachOptions(voice="null"))
+    try:
+        assert r._proc is not None
+        args = list(r._proc.arguments())
+        assert args[0] == "--run-coach"
+        assert "-m" not in args
+    finally:
+        if r._proc is not None:
+            r._proc.kill()
+            r._proc.waitForFinished(2000)
+
+
+def test_gui_main_dispatches_run_coach(monkeypatch) -> None:
+    """gui.app.main(['--run-coach', ...]) must hand off to gt7coach.main
+    before any Qt setup, returning its exit code verbatim."""
+    import gt7coach.main as coach_mod
+    from gt7coach.gui import app as app_mod
+
+    seen: dict[str, list[str]] = {}
+
+    def fake_coach_main(argv):
+        seen["argv"] = argv
+        return 42
+
+    monkeypatch.setattr(coach_mod, "main", fake_coach_main)
+    rc = app_mod.main(["--run-coach", "--voice", "null", "-v"])
+    assert rc == 42
+    assert seen["argv"] == ["--voice", "null", "-v"]

@@ -135,10 +135,16 @@ class CoachRunner(QObject):
 
         self._proc = QProcess(self)
         self._proc.setProgram(sys.executable)
-        # Use the module entry point so the subprocess works whether the user
-        # installed via `pip install -e .` or from a frozen bundle that
-        # already exposes the gt7coach package on sys.path.
-        self._proc.setArguments(["-m", "gt7coach.main", *options.to_argv()])
+        if getattr(sys, "frozen", False):
+            # PyInstaller bundle: sys.executable is GT7Coach.exe itself and
+            # there is no -m machinery. gui/app.py:main() recognises
+            # --run-coach and dispatches to gt7coach.main before any GUI
+            # setup.
+            self._proc.setArguments(["--run-coach", *options.to_argv()])
+        else:
+            # Use the module entry point so the subprocess works no matter
+            # how the user installed (`pip install -e .`, wheel, checkout).
+            self._proc.setArguments(["-m", "gt7coach.main", *options.to_argv()])
         self._proc.setProcessEnvironment(env)
         # Pin the working directory so .env / config.yaml auto-discovery sees
         # the place the GUI was launched from, no matter what the GUI does
@@ -209,10 +215,12 @@ class CoachRunner(QObject):
                 # terminal has a paper trail even if the GUI window
                 # disappears (uncaught slot exception, native crash, etc).
                 try:
-                    sys.stderr.write(f"[coach] {line}\n")
-                    sys.stderr.flush()
+                    if sys.stderr is not None:
+                        sys.stderr.write(f"[coach] {line}\n")
+                        sys.stderr.flush()
                 except (OSError, ValueError):
-                    # sys.stderr may be closed (e.g. PyInstaller windowed bundle).
+                    # sys.stderr may be closed (PyInstaller windowed bundles
+                    # set it to None, hence the guard above).
                     pass
 
     def _on_started(self) -> None:
