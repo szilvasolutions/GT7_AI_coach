@@ -55,6 +55,20 @@ class IncidentDetectorConfig:
     # Crash: massive instantaneous G spike (impact).
     crash_g_threshold: float = 4.0
     crash_min_speed_kmh: float = 15.0
+    # ...but GT7's accel_long channel does NOT spike on contact. In a logged
+    # wall hit the car went 32.1 -> 0.5 km/h in a single 60 Hz tick (~45 g of
+    # real deceleration) while accel_long still read -1.13 g, so the check
+    # above never fired and the driver got no acknowledgement at all. The
+    # speed channel is the one that shows an impact: derive the deceleration
+    # from consecutive packets instead.
+    impact_decel_g: float = 8.0  # hard braking peaks near 1.5 g, so this is ~5x clear
+    impact_max_dt_s: float = 0.12  # ignore gaps in the stream; only trust adjacent frames
+    impact_min_dt_s: float = 0.005  # sub-ms gaps turn a 1 km/h wobble into 100 g
+    # An impact sheds real speed. The logged wall hit lost 31.6 km/h; the
+    # hardest legitimate braking sheds ~6 km/h across impact_max_dt_s. Two
+    # false positives in the same session were 2.1 and 0.9 km/h drops that
+    # only looked violent because the packets were microseconds apart.
+    impact_min_drop_kmh: float = 15.0
 
     # Cooldown so one event doesn't fire 20 times.
     cooldown_s: float = 10.0
@@ -86,12 +100,39 @@ class IncidentDetector:
     def feed(self, packet: Packet) -> Incident | None:
         # Maintain speed history regardless of cooldown — needed for the
         # slide trigger and cheap to keep current.
+        prev = self._speed_history[-1] if self._speed_history else None
         self._speed_history.append((packet.recv_time, packet.speed_kmh))
 
         # Respect cooldown so we don't roast the driver six times for one spin.
         if (packet.recv_time - self._last_emit_t) < self.config.cooldown_s:
             self._spin_streak_started = None
             return None
+
+        # ---- crash check (speed collapse between two frames) ------------
+        # Runs first: an impact that bleeds all the speed leaves the car
+        # below crash_min_speed_kmh, so the G-spike branch below would skip
+        # it on the very frame it happened.
+        if prev is not None:
+            dt = packet.recv_time - prev[0]
+            lost_kmh = prev[1] - packet.speed_kmh
+            if (
+                self.config.impact_min_dt_s <= dt <= self.config.impact_max_dt_s
+                and prev[1] > self.config.crash_min_speed_kmh
+                and lost_kmh >= self.config.impact_min_drop_kmh
+                and (lost_kmh / 3.6) / dt / _G >= self.config.impact_decel_g
+            ):
+                return self._emit(
+                    Incident(
+                        type="crash",
+                        severity=min(1.0, ((lost_kmh / 3.6) / dt / _G) / 8.0),
+                        recv_time=packet.recv_time,
+                        evidence={
+                            "decel_g": round((lost_kmh / 3.6) / dt / _G, 1),
+                            "speed_lost_kmh": round(lost_kmh, 1),
+                            "speed_kmh": round(prev[1], 1),
+                        },
+                    )
+                )
 
         # ---- crash check (single-frame G spike) -------------------------
         if packet.speed_kmh > self.config.crash_min_speed_kmh:

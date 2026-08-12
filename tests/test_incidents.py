@@ -170,3 +170,51 @@ def test_null_voice_interrupt_just_records() -> None:
     v.speak("first")
     v.interrupt("URGENT")
     assert v.spoken == ["first", "URGENT"]
+
+
+# --- wall impact: GT7's accel channel doesn't spike, the speed channel does ---
+
+
+def test_wall_impact_detected_from_speed_collapse():
+    """Replays the real numbers from Ádám's Deep Forest wall hit: 32.1 ->
+    0.5 km/h in one 60 Hz tick while accel_long still read only -1.13 g.
+    The old accel-only check saw nothing and the coach never acknowledged it."""
+    det = IncidentDetector()
+    det.feed(make_packet(recv_time=0.000, speed_kmh=32.1, accel_long=-1.13 * 9.80665))
+    hit = det.feed(make_packet(recv_time=0.0167, speed_kmh=0.5, accel_long=-1.13 * 9.80665))
+    assert hit is not None, "a 45 g speed collapse must register as a crash"
+    assert hit.type == "crash"
+    assert hit.evidence["decel_g"] > 20
+    assert hit.severity == 1.0
+
+
+def test_hard_braking_is_not_a_crash():
+    """His heaviest real braking was ~1.5 g — roughly 0.9 km/h per tick. The
+    impact threshold must sit far above that."""
+    det = IncidentDetector()
+    t, v = 0.0, 165.0
+    fired = []
+    while v > 40:
+        det.feed(make_packet(recv_time=t, speed_kmh=v, accel_long=-1.5 * 9.80665))
+        hit = det.feed(make_packet(recv_time=t + 0.0167, speed_kmh=v - 0.9, accel_long=-14.7))
+        if hit:
+            fired.append(hit)
+        t += 0.0334
+        v -= 0.9
+    assert not fired, f"braking at 1.5 g must never read as an impact: {fired}"
+
+
+def test_packet_gap_is_not_a_crash():
+    """During the menu the stream ran at 9 Hz. A big speed delta across a
+    long gap is missing data, not an impact."""
+    det = IncidentDetector()
+    det.feed(make_packet(recv_time=0.0, speed_kmh=200.0))
+    assert det.feed(make_packet(recv_time=1.0, speed_kmh=60.0)) is None
+
+
+def test_microsecond_packet_gap_is_not_a_crash():
+    """Two false positives in the logged session were 2.1 and 0.9 km/h drops
+    that only looked violent because the packets were microseconds apart."""
+    det = IncidentDetector()
+    det.feed(make_packet(recv_time=0.0, speed_kmh=185.4))
+    assert det.feed(make_packet(recv_time=0.0003, speed_kmh=183.3)) is None
