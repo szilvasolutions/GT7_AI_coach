@@ -60,6 +60,102 @@ _PROVIDER_ENV_VAR: dict[str, str] = {
 }
 
 
+# Hover help for every field. Qt renders a tooltip containing rich text as
+# rich text, so these can wrap properly instead of being one long line.
+_FIELD_HELP: dict[str, str] = {
+    "_ps5_ip": (
+        "<b>IP address of your PS4/PS5.</b><br>"
+        "Leave as <tt>auto</tt> and the coach finds the console by broadcast — "
+        "that works on almost every home network.<br><br>"
+        "Set it by hand only if discovery fails, e.g. the console is on a "
+        "different subnet or VLAN. Find it on the console under "
+        "Settings ▸ Network ▸ Connection Status."
+    ),
+    "_provider": (
+        "<b>Which AI writes the coaching lines.</b><br>"
+        "<b>gemini</b> — free tier, fast, the recommended starting point.<br>"
+        "<b>anthropic</b> / <b>openai</b> — paid, need their own API key.<br>"
+        "<b>ollama</b> — runs a model on your own PC, no key, no internet, "
+        "but needs a decent GPU.<br>"
+        "<b>mock</b> — canned phrases, no AI at all. Handy for testing the "
+        "voice without spending anything."
+    ),
+    "_model": (
+        "<b>Leave blank unless you know you want a different model.</b><br>"
+        "Blank uses each provider's default, chosen to be fast enough to "
+        "speak before the next corner:<br>"
+        "gemini → <tt>gemini-2.5-flash-lite</tt><br>"
+        "anthropic → <tt>claude-haiku-4-5</tt><br>"
+        "openai → <tt>gpt-4o-mini</tt><br>"
+        "ollama → <tt>llama3.1:8b</tt><br><br>"
+        "Bigger models write better lines but often arrive too late to be "
+        "useful mid-lap."
+    ),
+    "_api_key": (
+        "<b>Your key for the selected provider.</b><br>"
+        "Stored in a <tt>.env</tt> file next to the app — never sent anywhere "
+        "except that provider. Get a free Gemini key at "
+        "<tt>aistudio.google.com/apikey</tt>.<br><br>"
+        "Leave blank to keep the key you already saved."
+    ),
+    "_driver_style": (
+        "<b>The tone the coach takes.</b><br>"
+        "<b>smooth</b> — calm and technical.<br>"
+        "<b>aggressive</b> — blunt and pushy.<br>"
+        "<b>learning</b> — patient and encouraging, for a track you don't know yet."
+    ),
+    "_car_class": (
+        "<b>What you're driving, in GT7's own words</b> — e.g. "
+        "<tt>Gr.3 RWD</tt>, <tt>N300 FF</tt>.<br>"
+        "Goes into every prompt, so the advice suits the car: a Gr.3 RWD gets "
+        "told about throttle-on oversteer, an FF road car about understeer.<br><br>"
+        "Optional, but it noticeably improves the coaching."
+    ),
+    "_track": (
+        "<b>Leave blank.</b> The coach recognises the circuit from your GPS "
+        "position, across 84 tracks.<br><br>"
+        "Only fill this in if detection picks the wrong track — run "
+        "<tt>gt7coach-list-tracks</tt> to see the ids."
+    ),
+    "_cooldown": (
+        "<b>Minimum seconds between spoken lines.</b><br>"
+        "Lower is chattier. Below about 3 s the coach talks over itself on "
+        "twisty circuits; 4 to 6 s suits most tracks."
+    ),
+    "_voice_engine": (
+        "<b>How the coach speaks.</b><br>"
+        "<b>pyttsx3</b> — your Windows system voice. Instant, robotic, no setup.<br>"
+        "<b>piper</b> — a much more natural neural voice, needs a model file "
+        "downloaded first.<br>"
+        "<b>null</b> — silent; advice is written to the log only."
+    ),
+    "_voice_speed": (
+        "<b>Speaking rate in words per minute.</b><br>"
+        "200 is the default. Faster fits more into a short straight but gets "
+        "harder to follow at speed."
+    ),
+    "_log_dir": (
+        "<b>Where each session's recording goes.</b><br>"
+        "One folder per run, holding the telemetry CSV, every event, every "
+        "prompt and reply the AI saw, and <tt>debug.log</tt>.<br><br>"
+        "Attach that folder when reporting a problem. It's also what "
+        "<tt>build_demo_video.py</tt> reads to sync a demo recording."
+    ),
+    "_generate_summary": (
+        "<b>Speak a short debrief when the session ends</b> — what to work on "
+        "next time, based on the faults that came up most."
+    ),
+}
+
+
+def _apply_field_help(dialog: QDialog) -> None:
+    """Attach the tooltips above to whichever fields the dialog has."""
+    for attr, text in _FIELD_HELP.items():
+        widget = getattr(dialog, attr, None)
+        if widget is not None:
+            widget.setToolTip(text)
+
+
 def _read_env_file(path: Path) -> dict[str, str]:
     """Parse a very simple .env (KEY=value lines, no quoting). Returns
     an empty dict if the file doesn't exist or is unreadable."""
@@ -205,6 +301,7 @@ class ConfigDialog(QDialog):
 
         # --- layout -------------------------------------------------------
         form = QFormLayout()
+        _apply_field_help(self)
         form.addRow("PS5 IP:", self._ps5_ip)
         form.addRow(QLabel("<b>Coach</b>"))
         form.addRow("Provider:", self._provider)

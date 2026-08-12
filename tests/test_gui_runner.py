@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import os
 import sys
+import tempfile
 import textwrap
 from pathlib import Path
 
@@ -337,3 +338,45 @@ def test_gui_main_dispatches_run_coach(monkeypatch) -> None:
     rc = app_mod.main(["--run-coach", "--voice", "null", "-v"])
     assert rc == 42
     assert seen["argv"] == ["--voice", "null", "-v"]
+
+
+def test_stop_writes_the_stop_file(qapp, tmp_path, monkeypatch) -> None:
+    """The frozen coach is a windowed process with no message loop, so
+    QProcess.terminate() can't reach it. Stop must leave a stop file the
+    coach polls for."""
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
+
+    r = CoachRunner()
+    r.start(CoachOptions(voice="null"))
+    try:
+        assert r._stop_file is not None
+        assert not r._stop_file.exists()
+        r.stop()
+        assert r._stop_file.exists(), "stop() must create the stop file"
+    finally:
+        if r._proc is not None:
+            r._proc.kill()
+            r._proc.waitForFinished(2000)
+
+
+def test_user_stop_is_not_reported_as_a_crash(qapp, tmp_path, monkeypatch) -> None:
+    """Killing the process makes QProcess report Crashed. After a Stop click
+    that's expected, and used to pop 'Crashed: Process crashed' at the user."""
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
+
+    r = CoachRunner()
+    failures: list[str] = []
+    exits: list[int] = []
+    r.start_failed.connect(failures.append)
+    r.exited.connect(exits.append)
+
+    r.start(CoachOptions(voice="null"))
+    assert r._proc is not None
+    r._proc.waitForStarted(3000)
+    r.stop()  # arms _stopping
+    r._proc.kill()  # what the second Stop / a stubborn process leads to
+    r._proc.waitForFinished(3000)
+    qapp.processEvents()
+
+    assert not failures, f"a requested stop must not raise a failure dialog: {failures}"
+    assert exits and exits[-1] == 0, f"expected a clean exit code, got {exits}"

@@ -165,14 +165,67 @@ _DETECTORS: list[tuple[str, object]] = [
 ]
 
 
-def _off_track_or_paused(packet: Packet) -> bool:
+def _off_track_or_paused(packet: Packet, *, strict: bool = False) -> bool:
     """True for frames captured in menus / replays / while paused.
 
-    GT7's flags word: bit 0 = car on track, bit 1 = paused. ``flags == 0``
-    means unknown (synthetic packets, captures from before the flags column
-    existed) — treat those as live so replays keep working.
+    GT7's flags word: bit 0 = car on track, bit 1 = paused.
+
+    ``flags == 0`` is ambiguous: it's what synthetic packets and captures
+    from before the flags column existed carry, but it's *also* what GT7
+    sends while you sit in a menu. Replaying a file, assume the capture is
+    real and process it (``strict=False``); on a live UDP stream, take it
+    at face value — bit 0 clear means the car is not on track.
     """
-    return packet.flags != 0 and (not packet.flags & 0x01 or bool(packet.flags & 0x02))
+    if packet.flags == 0:
+        return strict
+    return not packet.flags & 0x01 or bool(packet.flags & 0x02)
+
+
+class _StallGuard:
+    """Detects a telemetry stream whose values have stopped changing.
+
+    In GT7's menus the console keeps sending 60 Hz packets carrying a fixed
+    scene — constant speed, constant lateral g, constant position. The
+    corner detector reads sustained lateral g as a corner, finishes it,
+    and immediately starts another, so the coach narrates a race that
+    isn't happening (one user got 11 identical "corners" at a constant
+    134 km/h and 1.21 g while sitting in a menu).
+
+    Frozen frames can't be real driving, whatever the flags say, so gate
+    on the data itself as well.
+    """
+
+    def __init__(self, *, frames: int = 90) -> None:
+        self._frames = frames  # ~1.5 s at 60 Hz
+        self._last: tuple[float, float, float, float] | None = None
+        self._repeats = 0
+        self._warned = False
+
+    @property
+    def stalled(self) -> bool:
+        return self._repeats >= self._frames
+
+    def feed(self, packet: Packet) -> bool:
+        """Push a packet; return True if the stream is currently frozen."""
+        key = (packet.pos_x, packet.pos_y, packet.pos_z, packet.speed_mps)
+        if self._last is not None and key == self._last:
+            self._repeats += 1
+            if self.stalled and not self._warned:
+                self._warned = True
+                log.info(
+                    "telemetry frozen (%d identical frames at %.0f km/h) — "
+                    "treating this as a menu/replay scene and staying quiet "
+                    "until it changes",
+                    self._repeats,
+                    packet.speed_mps * 3.6,
+                )
+        else:
+            if self._warned:
+                log.info("telemetry moving again — coaching resumed")
+                self._warned = False
+            self._repeats = 0
+        self._last = key
+        return self.stalled
 
 
 def _run_detectors(
@@ -540,13 +593,28 @@ def main(argv: list[str] | None = None) -> int:
             log.warning("--track override failed: %s", exc)
 
     corner_idx = 0
+    # A live console is authoritative about its own flags; a CSV capture may
+    # predate them. Freeze detection applies either way.
+    live = args.source == "live"
+    stall_guard = _StallGuard()
+    # QProcess.terminate() is a no-op against a windowed process with no
+    # message loop, which is what the frozen GT7Coach.exe --run-coach is, so
+    # the GUI asks us to stop by creating this file instead. Without it Stop
+    # fell through to kill() and surfaced as "Crashed: Process crashed".
+    stop_file_env = os.environ.get("GT7COACH_STOP_FILE")
+    stop_file = Path(stop_file_env) if stop_file_env else None
+    if stop_file is not None and stop_file.exists():
+        stop_file.unlink(missing_ok=True)  # stale file from a previous run
     try:
         for packet in stream:
             if session is not None:
                 session.log_packet(packet)
             # GT7 keeps streaming packets in menus, replays and while paused —
             # skip those frames so detectors and lap timing don't chew on garbage.
-            if _off_track_or_paused(packet):
+            if stop_file is not None and stop_file.exists():
+                log.info("stop requested by the GUI — shutting down cleanly")
+                break
+            if _off_track_or_paused(packet, strict=live) or stall_guard.feed(packet):
                 continue
             # Track detector wants every packet (it maintains a position
             # buffer for sequence matching).

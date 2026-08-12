@@ -93,6 +93,10 @@ class CoachRunner(QObject):
         super().__init__(parent)
         self._proc: QProcess | None = None
         self._status_file: Path | None = None
+        self._stop_file: Path | None = None
+        # True from the moment the user asks to stop until the process is
+        # gone, so an abnormal exit code isn't reported as a crash.
+        self._stopping = False
         self._stdout_buf = ""
         self._stderr_buf = ""
 
@@ -127,9 +131,13 @@ class CoachRunner(QObject):
         tmpdir = Path(tempfile.gettempdir()) / "gt7coach-gui"
         tmpdir.mkdir(parents=True, exist_ok=True)
         self._status_file = tmpdir / f"status-{os.getpid()}.jsonl"
+        self._stop_file = tmpdir / f"stop-{os.getpid()}"
+        self._stop_file.unlink(missing_ok=True)
+        self._stopping = False
 
         env = QProcessEnvironment.systemEnvironment()
         env.insert("GT7COACH_STATUS_FILE", str(self._status_file))
+        env.insert("GT7COACH_STOP_FILE", str(self._stop_file))
 
         cwd = Path.cwd()
 
@@ -174,19 +182,35 @@ class CoachRunner(QObject):
         # process. _on_started below handles that transition.
 
     def stop(self) -> None:
-        """Send a graceful stop signal. Second call force-kills."""
+        """Ask the coach to shut down. Second call force-kills."""
         if not self.is_running():
             return
         assert self._proc is not None
-        # First stop: gentle. main.py's signal handler drains advisor +
-        # voice in the finally block. Second stop: kill.
+        # First stop: gentle. main.py drains the advisor + voice and writes
+        # meta.json on the way out. Second stop: kill.
         if self._proc.property("gt7_stop_count"):
             log.warning("second stop request — killing subprocess")
+            self._stopping = True
             self._proc.kill()
             self.state_changed.emit("stopping")
             return
-        log.info("sending terminate to subprocess pid=%s", self._proc.processId())
+        self._stopping = True
         self._proc.setProperty("gt7_stop_count", 1)
+        # Windows: QProcess.terminate() posts WM_CLOSE to the process's
+        # top-level windows. The frozen coach runs as GT7Coach.exe
+        # --run-coach — windowed subsystem, no window, no message loop — so
+        # nothing receives it and the process runs on until it's killed,
+        # which the GUI then reports as a crash. The stop file is what it
+        # actually watches for; terminate() still covers dev runs, where the
+        # coach is a console process and gets a real signal.
+        if self._stop_file is not None:
+            try:
+                self._stop_file.parent.mkdir(parents=True, exist_ok=True)
+                self._stop_file.touch()
+                log.info("stop requested via %s", self._stop_file)
+            except OSError as exc:
+                log.warning("could not write stop file %s: %s", self._stop_file, exc)
+        log.info("sending terminate to subprocess pid=%s", self._proc.processId())
         self._proc.terminate()
         self.state_changed.emit("stopping")
 
@@ -230,6 +254,14 @@ class CoachRunner(QObject):
 
     def _on_finished(self, exit_code: int, _exit_status) -> None:
         log.info("subprocess finished, exit_code=%d", exit_code)
+        if self._stop_file is not None:
+            self._stop_file.unlink(missing_ok=True)
+        if self._stopping and exit_code != 0:
+            # Killed on the user's own Stop click — report it as a clean exit
+            # so MainWindow doesn't treat it as a failure.
+            log.info("exit code %d after a requested stop; reporting clean", exit_code)
+            exit_code = 0
+        self._stopping = False
         self.state_changed.emit("stopped")
         self.exited.emit(exit_code)
         if self._status_file is not None:
@@ -244,6 +276,15 @@ class CoachRunner(QObject):
             error_name = error.name  # PySide6 enum -> human readable
         except AttributeError:
             error_name = str(error)
+        if self._stopping:
+            # Expected: a killed process reports QProcess.Crashed. The user
+            # asked for this, so don't pop "Crashed: Process crashed" at them.
+            log.info("QProcess %s during user-requested stop (expected)", error_name)
+            if self._proc is not None and self._proc.state() == QProcess.ProcessState.NotRunning:
+                self.state_changed.emit("stopped")
+                self.exited.emit(0)
+                self._proc = None
+            return
         log.warning("QProcess error %s: %s", error_name, msg)
         # Tell MainWindow exactly what went wrong. Without this signal the
         # operator gets the status bar flickering from "running" to "stopped"

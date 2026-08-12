@@ -8,6 +8,8 @@ import pytest
 
 from gt7coach.main import _select_provider, _stream_replay, parse_args
 
+from ._synth import make_packet
+
 # ---- _select_provider ------------------------------------------------------
 
 
@@ -196,3 +198,57 @@ def test_make_voice_system_is_alias_not_unknown() -> None:
         pytest.fail("'system' is documented and must alias pyttsx3, not raise")
     else:
         assert type(engine).__name__ == "PyttsxVoiceEngine"
+
+
+# --- menu telemetry: flags + frozen-stream guards ---------------------------
+
+
+def test_flags_zero_is_off_track_on_a_live_stream():
+    """GT7 sends flags==0 while you sit in a menu. On live UDP that means
+    'not on track'; only a replay file gets the benefit of the doubt."""
+    from gt7coach.main import _off_track_or_paused
+
+    pkt = make_packet(flags=0)
+    assert _off_track_or_paused(pkt, strict=True) is True
+    assert _off_track_or_paused(pkt, strict=False) is False
+
+
+def test_flags_on_track_and_paused_unchanged():
+    from gt7coach.main import _off_track_or_paused
+
+    assert _off_track_or_paused(make_packet(flags=0x01), strict=True) is False
+    assert _off_track_or_paused(make_packet(flags=0x03), strict=True) is True  # paused
+    assert _off_track_or_paused(make_packet(flags=0x80), strict=True) is True  # lights only
+
+
+def test_stall_guard_flags_a_frozen_stream():
+    """Regression for the menu report: constant position + speed produced a
+    stream of identical 'corners' at 134 km/h."""
+    from gt7coach.main import _StallGuard
+
+    guard = _StallGuard(frames=5)
+    frozen = make_packet(pos=(695.0, -20.0, 0.0), speed_kmh=134.0, flags=0x01)
+    results = [guard.feed(frozen) for _ in range(10)]
+    assert results[0] is False  # first frame can't be a repeat
+    assert results[-1] is True
+    assert guard.stalled is True
+
+
+def test_stall_guard_recovers_when_the_car_moves():
+    from gt7coach.main import _StallGuard
+
+    guard = _StallGuard(frames=3)
+    for _ in range(6):
+        guard.feed(make_packet(pos=(1.0, 0.0, 0.0), speed_kmh=36.0, flags=0x01))
+    assert guard.stalled is True
+    assert guard.feed(make_packet(pos=(2.0, 0.0, 0.0), speed_kmh=38.0, flags=0x01)) is False
+    assert guard.stalled is False
+
+
+def test_stall_guard_passes_normal_driving():
+    from gt7coach.main import _StallGuard
+
+    guard = _StallGuard(frames=5)
+    for i in range(60):
+        pkt = make_packet(pos=(float(i), 0.0, i * 0.5), speed_kmh=140.0 + i * 0.1)
+        assert guard.feed(pkt) is False
