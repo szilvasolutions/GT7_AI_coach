@@ -64,6 +64,16 @@ jobs:
             Start-Sleep -Seconds 10
           }
           if (-not (Test-Path $exe)) {
+            # The stub transcribes its PowerShell session here; without it a
+            # failure looks identical to a slow download.
+            $log = Join-Path $work 'install-log.txt'
+            if (Test-Path $log) {
+              echo "----- install-log.txt -----"
+              Get-Content $log
+              echo "---------------------------"
+            } else {
+              echo "no install-log.txt written - the stub never started PowerShell"
+            }
             throw "the stub did not produce $exe - install failed or timed out"
           }
           $mb = [math]::Round((Get-Item $exe).Length / 1MB, 1)

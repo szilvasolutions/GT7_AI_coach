@@ -7,16 +7,22 @@
  * in the repo instead and fetches the real thing on demand.
  *
  * All it does: confirm with the user, drop a PowerShell script in %TEMP%,
- * and run it. The script is the same one !CLICK-ME-TO-INSTALL.bat runs —
+ * and run it. The script is the same one INSTALL-alternative.bat runs —
  * resolve the latest release through the GitHub API, download the win64
  * bundle, check it against SHA256SUMS.txt, unpack it next to this exe and
  * launch it. Keep the two in sync.
  *
+ * Every Invoke-WebRequest passes -UseBasicParsing: without it, PowerShell
+ * 5.1 hands the response to the Internet Explorer engine, which throws on
+ * any machine where IE's first-run configuration never completed. That is
+ * most fresh Windows installs, and it is what broke the first CI run.
+ *
  * Build (from the repo root, on Linux with mingw-w64):
- *   x86_64-w64-mingw32-gcc -O2 -s -mwindows -municode \
+ *   x86_64-w64-mingw32-gcc -O2 -s -mwindows -municode -Wall -Wextra -Werror \
  *       -o INSTALL-GT7-COACH.exe packaging/installer_stub.c -lshell32
  *
- * CI rebuilds and verifies this on every release; see release.yml.
+ * .github/workflows/installer.yml rebuilds the source and runs the
+ * committed exe end-to-end on Windows; `/S` skips the dialog for CI.
  */
 
 /* windows.h first — shellapi.h depends on its typedefs. */
@@ -34,21 +40,24 @@ static const wchar_t *PS_SCRIPT =
     L"$ProgressPreference='SilentlyContinue'\n"
     L"[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12\n"
     L"$dest='%s'\n"
+    L"$silent=$%s\n"
+    L"try{Start-Transcript -Path (Join-Path $dest 'install-log.txt') -Force|Out-Null}catch{}\n"
     L"Write-Host ''\n"
     L"Write-Host '  GT7 AI Coach - downloading the app' -ForegroundColor Cyan\n"
     L"Write-Host ''\n"
     L"try {\n"
     L"  $h=@{'User-Agent'='gt7coach-installer'}\n"
     L"  $r=Invoke-RestMethod "
-    L"'https://api.github.com/repos/szilvasolutions/GT7_AI_coach/releases/latest' -Headers $h\n"
+    L"'https://api.github.com/repos/szilvasolutions/GT7_AI_coach/releases/latest' "
+    L"-Headers $h -UseBasicParsing\n"
     L"  $a=$r.assets|Where-Object{$_.name -like '*win64.zip'}|Select-Object -First 1\n"
     L"  if(-not $a){throw 'the latest release has no win64 zip'}\n"
     L"  $zip=Join-Path $env:TEMP $a.name\n"
     L"  Write-Host ('  Downloading ' + $a.name + ' (' + [math]::Round($a.size/1MB) + ' MB) ...')\n"
-    L"  Invoke-WebRequest $a.browser_download_url -OutFile $zip -Headers $h\n"
+    L"  Invoke-WebRequest $a.browser_download_url -OutFile $zip -Headers $h -UseBasicParsing\n"
     L"  $s=$r.assets|Where-Object{$_.name -eq 'SHA256SUMS.txt'}|Select-Object -First 1\n"
     L"  if($s){\n"
-    L"    $sums=(Invoke-WebRequest $s.browser_download_url -Headers $h).Content\n"
+    L"    $sums=(Invoke-WebRequest $s.browser_download_url -Headers $h -UseBasicParsing).Content\n"
     L"    $want=($sums -split \"`n\"|Where-Object{$_ -match [regex]::Escape($a.name)}|"
     L"Select-Object -First 1) -split '\\s+'|Select-Object -First 1\n"
     L"    $got=(Get-FileHash -Algorithm SHA256 $zip).Hash.ToLower()\n"
@@ -67,6 +76,7 @@ static const wchar_t *PS_SCRIPT =
     L"  Write-Host '  click \"More info\", then \"Run anyway\".'\n"
     L"  Start-Process $exe\n"
     L"  Start-Sleep -Seconds 6\n"
+    L"  try{Stop-Transcript|Out-Null}catch{}\n"
     L"} catch {\n"
     L"  Write-Host ''\n"
     L"  Write-Host ('  Install failed: ' + $_.Exception.Message) -ForegroundColor Red\n"
@@ -74,7 +84,8 @@ static const wchar_t *PS_SCRIPT =
     L"  Write-Host '  Download it by hand instead:'\n"
     L"  Write-Host '  https://github.com/szilvasolutions/GT7_AI_coach/releases/latest'\n"
     L"  Write-Host ''\n"
-    L"  Read-Host '  Press Enter to close'\n"
+    L"  try{Stop-Transcript|Out-Null}catch{}\n"
+    L"  if(-not $silent){Read-Host '  Press Enter to close'}\n"
     L"  exit 1\n"
     L"}\n";
 
@@ -100,7 +111,9 @@ static BOOL silent(PWSTR args) {
 int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR args, int show) {
     (void)inst; (void)prev; (void)show;
 
-    if (!silent(args) &&
+    const BOOL is_silent = silent(args);
+
+    if (!is_silent &&
         MessageBoxW(NULL,
                     L"This downloads GT7 AI Coach (about 95 MB) from its official "
                     L"GitHub release page, unpacks it into this folder and starts it.\n\n"
@@ -137,7 +150,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR args, int show) {
                     APP_TITLE, MB_ICONERROR | MB_OK);
         return 1;
     }
-    fwprintf(f, PS_SCRIPT, dir);
+    fwprintf(f, PS_SCRIPT, dir, is_silent ? L"true" : L"false");
     fclose(f);
 
     wchar_t params[MAX_PATH + 64];
