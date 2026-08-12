@@ -376,9 +376,11 @@ class ConfigDialog(QDialog):
         self._show_key.setEnabled(True)
         existing = self._env_values.get(env_var, "")
         if existing:
-            masked = existing[:6] + "…" + existing[-4:] if len(existing) > 12 else "(short)"
+            # Dots, not a truncated copy of the key: an empty-looking box
+            # reads as "my key is gone", and echoing even part of a secret
+            # into a screenshot-able field is a habit worth not having.
             self._api_key.setPlaceholderText(
-                f"{env_var}={masked} (leave blank to keep, or paste new)"
+                "•••••••••••••••••  saved — leave blank to keep it, or paste a new one"
             )
         else:
             self._api_key.setPlaceholderText(f"paste your {env_var} here")

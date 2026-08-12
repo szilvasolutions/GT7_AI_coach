@@ -37,6 +37,13 @@
  * it stays diffable against the .bat. */
 static const wchar_t *PS_HEAD =
     L"$ErrorActionPreference='Stop'\n"
+    /* This process inherits PSModulePath from whatever launched the
+     * exe. If that was PowerShell 7 (or a CI shell), Windows PowerShell
+     * 5.1 goes looking for its modules in PS7 directories and loses its
+     * own cmdlets - Get-FileHash and Expand-Archive both vanished that
+     * way. Point it back at the system locations. */
+    L"$env:PSModulePath=\"$env:SystemRoot\\system32\\WindowsPowerShell\\v1.0\\Modules;\"+\n"
+    L"  \"$env:ProgramFiles\\WindowsPowerShell\\Modules\"\n"
     L"$ProgressPreference='SilentlyContinue'\n"
     L"[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12\n";
 
@@ -63,7 +70,10 @@ static const wchar_t *PS_BODY =
     L"-UseBasicParsing -TimeoutSec 60).Content\n"
     L"    $want=($sums -split \"`n\"|Where-Object{$_ -match [regex]::Escape($a.name)}|"
     L"Select-Object -First 1) -split '\\s+'|Select-Object -First 1\n"
-    L"    $got=(Get-FileHash -Algorithm SHA256 $zip).Hash.ToLower()\n"
+    L"    $fs=[System.IO.File]::OpenRead($zip)\n"
+    L"    try{$got=[BitConverter]::ToString("
+    L"[System.Security.Cryptography.SHA256]::Create().ComputeHash($fs))"
+    L".Replace('-','').ToLower()}finally{$fs.Dispose()}\n"
     L"    if($want -and $want -ne $got){throw ('checksum mismatch - expected ' + $want + "
     L"' but got ' + $got)}\n"
     L"    Write-Host '  Checksum OK' -ForegroundColor Green\n"

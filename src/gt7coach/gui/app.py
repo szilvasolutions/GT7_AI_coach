@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMainWindow,
     QMessageBox,
+    QPushButton,
     QSlider,
     QSplitter,
     QStatusBar,
@@ -39,11 +40,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from gt7coach import __version__ as CURRENT_VERSION
 from gt7coach.gui.config_panel import ConfigDialog
 from gt7coach.gui.log_tail import StatusEvent, StatusTail
 from gt7coach.gui.runner import CoachOptions, CoachRunner
 from gt7coach.gui.theme import apply_theme
-from gt7coach.gui.updater import UpdateChecker, UpdateInfo
+from gt7coach.gui.updater import UpdateChecker, UpdateInfo, can_self_update
 from gt7coach.gui.widgets.advice_history import AdviceHistory
 from gt7coach.gui.widgets.console_panel import ConsolePanel
 from gt7coach.gui.widgets.lap_table import LapTable
@@ -59,6 +61,8 @@ _DRIVER_STYLE_CHOICES = ["smooth", "aggressive", "learning"]
 
 
 class MainWindow(QMainWindow):
+    _update_check_was_manual: bool = False
+
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("GT7 AI Coach")
@@ -159,6 +163,24 @@ class MainWindow(QMainWindow):
         # --- Status bar ---------------------------------------------------
         self.setStatusBar(QStatusBar())
         self.statusBar().showMessage("Ready. Press Start to launch the coach.")
+        # Version + update control, pinned to the right of the status bar so
+        # "which build am I actually running?" is always answerable, and so
+        # checking for an update gives an answer either way.
+        self._version_label = QLabel(f"v{CURRENT_VERSION}")
+        self._version_label.setToolTip(
+            f"<b>GT7 AI Coach v{CURRENT_VERSION}</b><br>"
+            "The version you're running right now. Compare it against the "
+            "newest release with the button next to it."
+        )
+        self._update_button = QPushButton("Check for updates")
+        self._update_button.setToolTip(
+            "Ask GitHub whether a newer release exists.<br>"
+            "You'll get an answer either way — including when you're already "
+            "up to date."
+        )
+        self._update_button.clicked.connect(self._on_check_updates_clicked)
+        self.statusBar().addPermanentWidget(self._version_label)
+        self.statusBar().addPermanentWidget(self._update_button)
 
         # --- File menu ----------------------------------------------------
         file_menu = self.menuBar().addMenu("&File")
@@ -193,12 +215,17 @@ class MainWindow(QMainWindow):
         tools_menu.addAction(voice_test_action)
         tools_menu.addSeparator()
         check_updates_action = QAction("Check for updates", self)
-        check_updates_action.triggered.connect(lambda: self._update_checker.check(force=True))
+        check_updates_action.triggered.connect(self._on_check_updates_clicked)
         tools_menu.addAction(check_updates_action)
 
         # --- Update checker ----------------------------------------------
         self._update_checker = UpdateChecker(self)
         self._update_checker.update_available.connect(self._update_banner.show_for)
+        self._update_checker.update_available.connect(self._on_update_available)
+        # Without these two the button was a black hole: when you were
+        # already on the newest build, clicking it did nothing observable.
+        self._update_checker.no_update.connect(self._on_no_update)
+        self._update_checker.check_failed.connect(self._on_check_failed)
         # Kick off a cached / lightweight check at startup. Force=False so
         # we don't hit the GitHub API more than once every 6 hours.
         self._update_checker.check(force=False)
@@ -221,6 +248,9 @@ class MainWindow(QMainWindow):
         # Tracks whether the most recent exit was triggered by a Stop click
         # (so we don't pop a "crashed" dialog when the user asked for it).
         self._stop_requested: bool = False
+        # True only while a check the user actually asked for is in flight, so
+        # the silent startup check can't pop dialogs at them.
+        self._update_check_was_manual: bool = False
 
         # Restore persisted window geometry + toolbar options last, so the
         # defaults above only apply on a truly fresh install.
@@ -436,6 +466,73 @@ class MainWindow(QMainWindow):
     def _open_config_dialog(self) -> None:
         dlg = ConfigDialog(self)
         dlg.exec()
+
+    # ---- update button -----------------------------------------------------
+
+    def _on_check_updates_clicked(self) -> None:
+        """Manual check. Always ends in a visible answer — the old menu item
+        was silent when you were already up to date, which read as broken."""
+        self._update_check_was_manual = True
+        self._update_button.setEnabled(False)
+        self._update_button.setText("Checking…")
+        self.statusBar().showMessage("Checking GitHub for a newer release…")
+        self._update_checker.check(force=True)
+
+    def _reset_update_button(self, text: str = "Check for updates") -> None:
+        self._update_button.setEnabled(True)
+        self._update_button.setText(text)
+
+    def _on_update_available(self, info: UpdateInfo) -> None:
+        self._reset_update_button(f"Update to {info.tag}")
+        self.statusBar().showMessage(f"Update available: {info.tag}")
+        if not self._update_check_was_manual:
+            return
+        self._update_check_was_manual = False
+        if can_self_update():
+            answer = QMessageBox.question(
+                self,
+                "Update available",
+                f"<b>{info.tag}</b> is available — you're on v{CURRENT_VERSION}.\n\n"
+                "Download and install it now? The app will close and reopen "
+                "on the new version.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes,
+            )
+            if answer == QMessageBox.StandardButton.Yes:
+                self._on_download_update(info)
+        else:
+            QMessageBox.information(
+                self,
+                "Update available",
+                f"<b>{info.tag}</b> is available — you're on v{CURRENT_VERSION}.\n\n"
+                "This single-file build can't replace itself while running. "
+                "Use 'View release' on the banner to download the new one.",
+            )
+
+    def _on_no_update(self) -> None:
+        self._reset_update_button()
+        self.statusBar().showMessage(f"No new updates — v{CURRENT_VERSION} is the latest.")
+        if self._update_check_was_manual:
+            self._update_check_was_manual = False
+            QMessageBox.information(
+                self,
+                "No new updates",
+                f"You're running <b>v{CURRENT_VERSION}</b>, which is the newest "
+                "release. Nothing to install.",
+            )
+
+    def _on_check_failed(self, reason: str) -> None:
+        self._reset_update_button()
+        self.statusBar().showMessage("Update check failed.")
+        if self._update_check_was_manual:
+            self._update_check_was_manual = False
+            QMessageBox.warning(
+                self,
+                "Couldn't check for updates",
+                f"GitHub couldn't be reached:\n\n{reason}\n\n"
+                f"You're running v{CURRENT_VERSION}. This doesn't affect the "
+                "coach — it only means the version check failed.",
+            )
 
     def _on_download_update(self, info: UpdateInfo) -> None:
         """Drive the self-update flow: download, verify, spawn updater.exe."""
