@@ -138,7 +138,7 @@ jobs:
           name: GT7 AI Coach ${{ steps.vars.outputs.tag }}
           # Published straight away: a draft release is invisible to users
           # and breaks the /releases/latest links the README and
-          # !CLICK-ME-TO-INSTALL.bat rely on. The smoke test above is the gate.
+          # INSTALL-GT7-COACH.exe rely on. The smoke test above is the gate.
           draft: false
           generate_release_notes: true
           files: |
