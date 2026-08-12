@@ -633,6 +633,10 @@ def main(argv: list[str] | None = None) -> int:
             # not just corners, so the limit is known before the first corner
             # that needs judging.
             advisor.grip_envelope.feed(packet)
+            # Corner-detection thresholds were tuned on a high-grip Gr.3 car.
+            # Scale them to whatever is being driven now, so a road car or a
+            # rally stage on dirt still produces corners instead of silence.
+            seg.set_grip_limit(advisor.grip_envelope.limit_g)
             lap_tracker.feed_packet(packet)
             # VR voice-HUD alerts (tire temp, fuel, coolant, shift, self-delta).
             # Per-packet, deterministic phrases, no LLM call.

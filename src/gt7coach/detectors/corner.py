@@ -35,6 +35,15 @@ class CornerSegmenterConfig:
     exit_brake: int = 20  # 0..255
     exit_lat_g: float = 0.50  # g
     min_dwell_s: float = 0.5  # exit conditions must hold this long
+    # The lateral-g thresholds above were tuned on a Gr.3 car that pulls about
+    # 2.1 g. A road car manages ~1.0 g and a rally car on dirt ~0.7, so those
+    # fixed numbers would mean a rally stage never crosses the entry threshold
+    # at all and every corner exits the instant the load eases. When the grip
+    # envelope knows what this car can do, the thresholds scale with it. The
+    # fractions below reproduce the tuned values on the car they came from:
+    # 0.45 * 2.1 = 0.95 entry, 0.25 * 2.1 = 0.53 exit.
+    entry_lat_g_fraction: float = 0.45
+    exit_lat_g_fraction: float = 0.25
     min_corner_duration_s: float = 0.7  # discard sub-threshold blips
     # Force-finalise the running buffer if it exceeds this duration; long
     # "corners" are typically merged sections that are unhelpful to coach as
@@ -310,10 +319,30 @@ class CornerSegmenter:
         # 3. Fallback: just cut at the most recent packet.
         return len(self._buffer) - 1
 
+    def set_grip_limit(self, limit_g: float | None) -> None:
+        """Tell the segmenter what this car can actually pull.
+
+        Called once the grip envelope has seen enough of the session. Until
+        then the fixed thresholds apply.
+        """
+        self._grip_limit_g = limit_g
+
+    @property
+    def _entry_lat_g(self) -> float:
+        if getattr(self, "_grip_limit_g", None):
+            return self._grip_limit_g * self.config.entry_lat_g_fraction
+        return self.config.entry_lat_g
+
+    @property
+    def _exit_lat_g(self) -> float:
+        if getattr(self, "_grip_limit_g", None):
+            return self._grip_limit_g * self.config.exit_lat_g_fraction
+        return self.config.exit_lat_g
+
     def _cornering_signal(self, p: Packet) -> bool:
         lat_g = abs(p.accel_lat or 0.0) / G_MS2
-        return p.brake > self.config.entry_brake or lat_g > self.config.entry_lat_g
+        return p.brake > self.config.entry_brake or lat_g > self._entry_lat_g
 
     def _exit_signal(self, p: Packet) -> bool:
         lat_g = abs(p.accel_lat or 0.0) / G_MS2
-        return p.brake < self.config.exit_brake and lat_g < self.config.exit_lat_g
+        return p.brake < self.config.exit_brake and lat_g < self._exit_lat_g

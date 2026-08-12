@@ -7,6 +7,8 @@ regress).
 
 from __future__ import annotations
 
+import pytest
+
 from gt7coach.detectors import (
     CornerSegmenter,
     CornerSegmenterConfig,
@@ -398,3 +400,48 @@ def test_replay_known_bad_trace_fires_all_three_detectors() -> None:
         assert 0.0 < evt.severity <= 1.0
         assert evt.t_offset >= 0
         assert isinstance(evt.evidence, dict)
+
+
+# --- corner thresholds must follow the car, not a Gr.3 assumption -----------
+
+
+def test_corner_thresholds_scale_with_the_cars_grip():
+    """Tuned on a Gr.3 pulling ~2.1 g. A rally car on dirt manages ~0.7 and
+    would never cross a fixed 0.95 g entry threshold — the coach would go
+    silent for a whole stage."""
+    seg = CornerSegmenter()
+    assert seg._entry_lat_g == pytest.approx(0.95), "fixed default before the car is known"
+
+    seg.set_grip_limit(2.1)  # the car the thresholds were tuned on
+    assert seg._entry_lat_g == pytest.approx(0.95, abs=0.01)
+    assert seg._exit_lat_g == pytest.approx(0.53, abs=0.01)
+
+    seg.set_grip_limit(0.7)  # rally car on dirt
+    assert seg._entry_lat_g < 0.4, "a dirt car must be able to trigger a corner"
+    assert seg._exit_lat_g < 0.2
+
+
+def test_a_low_grip_car_still_produces_corners():
+    """With fixed thresholds a 0.7 g car never starts a corner on lateral load."""
+    fixed = CornerSegmenter()
+    scaled = CornerSegmenter()
+    scaled.set_grip_limit(0.7)
+
+    found_fixed = found_scaled = 0
+    for i in range(400):
+        # A long dirt corner: 0.55 g sustained, no heavy braking.
+        cornering = 120 < i < 300
+        pkt = make_packet(
+            recv_time=i / 60,
+            speed_kmh=90.0,
+            accel_lat=(0.55 * 9.80665) if cornering else 0.0,
+            brake=0,
+            throttle=180,
+        )
+        if fixed.feed(pkt) is not None:
+            found_fixed += 1
+        if scaled.feed(pkt) is not None:
+            found_scaled += 1
+
+    assert found_fixed == 0, "baseline: the fixed threshold cannot see this corner"
+    assert found_scaled >= 1, "scaled thresholds must detect it"
