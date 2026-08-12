@@ -34,6 +34,15 @@ from itertools import pairwise
 
 from gt7coach.detectors import CornerTrace
 
+# Corners are identified by where they sit on the track's polyline, quantised
+# into buckets, rather than by the nearest entry in the track database's turn
+# list. That list is incomplete: Deep Forest declares 18 corners and lists 11,
+# leaving a 122-point gap across a third of the lap, so every corner driven in
+# that stretch mapped onto the same turn index. One index collected ten passes
+# and comparisons became meaningless. A bucket is stable per location whether
+# or not the database happens to name that corner.
+_LOCATION_BUCKET_POINTS = 12
+
 # A corner whose trace contains a teleport or a stall is not a real sample.
 # Position cannot jump this far between two 60 Hz frames under any legitimate
 # driving — 30 m at 60 Hz implies 6480 km/h.
@@ -98,11 +107,34 @@ def trace_is_clean(trace: CornerTrace) -> bool:
     return True
 
 
+def location_key(track: object, trace: CornerTrace) -> int | None:
+    """Stable identity for *where* this corner is, independent of the turn list.
+
+    Uses the polyline index of the corner's slowest point — the apex is far
+    more stable between laps than the segment boundaries, which move with
+    entry speed and line.
+    """
+    if track is None:
+        return None
+    packets = trace.packets
+    if not packets:
+        return None
+    apex = min(packets, key=lambda p: p.speed_kmh)
+    try:
+        idx, dist = track.nearest_polyline_index(apex.pos_x, apex.pos_z)  # type: ignore[attr-defined]
+    except AttributeError:
+        return None
+    if dist > 60.0:  # nowhere near this track's line
+        return None
+    return idx // _LOCATION_BUCKET_POINTS
+
+
 @dataclass
 class CornerHistory:
     """Remembers the best pass through each identified turn this session."""
 
     _best: dict[int, CornerBest] = field(default_factory=dict)
+    _last_key: int | None = None
 
     def compare_and_record(self, turn_index: int | None, trace: CornerTrace) -> CornerDelta | None:
         """Compare this pass with the stored best, then update it.
@@ -111,7 +143,15 @@ class CornerHistory:
         identified, or when the trace is not a clean sample.
         """
         if turn_index is None or not trace_is_clean(trace):
+            self._last_key = None
             return None
+
+        # Two segments arriving back-to-back at the same place are one corner
+        # the segmenter split, not two passes: the reference session produced
+        # pairs at an identical 86 and 93 km/h. Fold the second into the first
+        # instead of comparing a corner against itself.
+        continuation = turn_index == self._last_key
+        self._last_key = turn_index
 
         current = CornerBest(
             min_speed_kmh=trace.min_speed_kmh,
@@ -121,6 +161,11 @@ class CornerHistory:
         previous = self._best.get(turn_index)
         if previous is None:
             self._best[turn_index] = current
+            return None
+
+        if continuation:
+            if current.min_speed_kmh > previous.min_speed_kmh:
+                self._best[turn_index] = current
             return None
 
         delta = CornerDelta(

@@ -165,6 +165,17 @@ _DETECTORS: list[tuple[str, object]] = [
 ]
 
 
+def _self_delta_for(advisor, track_detector, trace) -> str | None:
+    """How this corner compares with the driver's own best through the same
+    place. Returns None the first time a location is seen, or when it can't be
+    identified — never guesses."""
+    from gt7coach.coach.corner_history import location_key
+
+    key = location_key(getattr(track_detector, "track", None), trace)
+    delta = advisor.corner_history.compare_and_record(key, trace)
+    return delta.describe() if delta is not None else None
+
+
 def _off_track_or_paused(packet: Packet, *, strict: bool = False) -> bool:
     """True for frames captured in menus / replays / while paused.
 
@@ -695,6 +706,7 @@ def main(argv: list[str] | None = None) -> int:
             if session is not None:
                 session.log_corner(corner_idx, trace, events)
             lap_tracker.feed_events(events)
+            advisor.pending_self_delta = _self_delta_for(advisor, track_detector, trace)
             advisor.on_corner(trace, events, corner_idx=corner_idx)
         trailing = seg.flush()
         if trailing is not None:

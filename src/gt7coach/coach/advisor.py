@@ -176,6 +176,9 @@ class CornerContext:
     elevation_change_m: float = 0.0
     front_slip: float | None = None
     rear_slip: float | None = None
+    # "You have driven this corner better before" — set by the caller, since
+    # only the main loop knows where on the track this corner sat.
+    self_delta: str | None = None
 
     @classmethod
     def from_trace(
@@ -361,6 +364,11 @@ class Advisor:
         from gt7coach.coach.grip import GripEnvelope
 
         self.grip_envelope = GripEnvelope()
+        from gt7coach.coach.corner_history import CornerHistory
+
+        self.corner_history = CornerHistory()
+        # Set per corner by the main loop, which owns the track detector.
+        self.pending_self_delta: str | None = None
         self._pending_lock = threading.Lock()
         self._wake = threading.Event()
         self._stop_evt = threading.Event()
@@ -568,6 +576,7 @@ class Advisor:
             track_shape=self.config.track_shape,
             envelope=self.grip_envelope,
         )
+        ctx.self_delta = self.pending_self_delta
         user_prompt = build_user_prompt(
             job.top,
             ctx,

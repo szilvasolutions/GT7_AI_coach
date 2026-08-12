@@ -280,6 +280,9 @@ def build_user_prompt(
     if shape_bits:
         blocks.append("Also: " + "; ".join(shape_bits) + ".")
 
+    if context.self_delta:
+        blocks.append(f"Versus this driver's own best through this corner: {context.self_delta}.")
+
     if context.tyre_state:
         blocks.append(f"Tyres: {context.tyre_state}.")
 

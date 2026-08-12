@@ -30,6 +30,7 @@ def test_first_pass_sets_the_baseline_and_reports_nothing():
 def test_second_pass_reports_the_difference():
     hist = CornerHistory()
     hist.compare_and_record(3, _corner(min_speed=90.0, lap=1))
+    hist.compare_and_record(7, _corner())  # a different corner in between
     delta = hist.compare_and_record(3, _corner(min_speed=98.0, lap=2))
     assert delta is not None
     assert delta.min_speed_delta_kmh == 8.0
@@ -39,6 +40,7 @@ def test_second_pass_reports_the_difference():
 def test_a_slower_pass_names_the_lap_they_did_better():
     hist = CornerHistory()
     hist.compare_and_record(3, _corner(min_speed=100.0, lap=1))
+    hist.compare_and_record(7, _corner())
     delta = hist.compare_and_record(3, _corner(min_speed=88.0, lap=4))
     assert "slower" in delta.describe()
     assert "lap 1" in delta.describe()
@@ -47,6 +49,7 @@ def test_a_slower_pass_names_the_lap_they_did_better():
 def test_noise_is_not_reported():
     hist = CornerHistory()
     hist.compare_and_record(3, _corner(min_speed=90.0, exit_speed=120.0))
+    hist.compare_and_record(7, _corner())
     delta = hist.compare_and_record(3, _corner(min_speed=91.0, exit_speed=121.0))
     assert delta.is_meaningful is False
     assert delta.describe() is None
@@ -55,7 +58,9 @@ def test_noise_is_not_reported():
 def test_the_best_is_kept_not_the_latest():
     hist = CornerHistory()
     hist.compare_and_record(3, _corner(min_speed=100.0, lap=1))
+    hist.compare_and_record(7, _corner())
     hist.compare_and_record(3, _corner(min_speed=80.0, lap=2))  # a bad lap
+    hist.compare_and_record(7, _corner())
     delta = hist.compare_and_record(3, _corner(min_speed=95.0, lap=3))
     assert delta.min_speed_delta_kmh == -5.0, "must still compare against the 100 km/h pass"
 
@@ -79,3 +84,12 @@ def test_unidentified_turns_are_skipped():
     hist = CornerHistory()
     assert hist.compare_and_record(None, _corner()) is None
     assert hist.known_turns() == 0
+
+
+def test_a_split_corner_is_not_compared_against_itself():
+    """The segmenter sometimes emits one corner as two segments; the reference
+    session produced pairs at an identical 86 and 93 km/h. Two segments at the
+    same place back-to-back are one corner, not two passes."""
+    hist = CornerHistory()
+    hist.compare_and_record(3, _corner(min_speed=86.0, lap=2))
+    assert hist.compare_and_record(3, _corner(min_speed=86.0, lap=2)) is None
