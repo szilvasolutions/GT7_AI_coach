@@ -293,6 +293,10 @@ class _PendingJob:
     now: float | None
     enqueued_at: float = field(default_factory=lambda: 0.0)
     predecessors: list[str] = field(default_factory=list)
+    # Captured when the job is queued, not read when it is processed: the
+    # worker runs later, by which point the main loop has moved on and the
+    # advisor's pending value belongs to a different corner.
+    self_delta: str | None = None
 
 
 # How many superseded corners a sequence prompt may reference. Oldest are
@@ -442,7 +446,9 @@ class Advisor:
             winner=winner,
             top=top,
             now=now,
+            self_delta=self.pending_self_delta,
         )
+        self.pending_self_delta = None
         if self._worker_thread is None:
             return self._process_job(job)
         with self._pending_lock:
@@ -576,7 +582,7 @@ class Advisor:
             track_shape=self.config.track_shape,
             envelope=self.grip_envelope,
         )
-        ctx.self_delta = self.pending_self_delta
+        ctx.self_delta = job.self_delta
         user_prompt = build_user_prompt(
             job.top,
             ctx,

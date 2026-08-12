@@ -235,3 +235,35 @@ def test_make_provider_unknown_raises() -> None:
     except ProviderError:
         return
     raise AssertionError("expected ProviderError for unknown provider name")
+
+
+def test_self_delta_is_captured_when_queued_not_when_processed():
+    """The worker runs later than the main loop that sets the delta, so
+    reading it at process time attaches one corner's comparison to another."""
+    from gt7coach.coach.advisor import _PendingJob
+    from gt7coach.detectors import CornerTrace, Event
+    from tests._synth import make_packet
+
+    trace = CornerTrace(packets=[make_packet(recv_time=i / 60) for i in range(30)])
+    evt = Event(type="throttle.early_lift", severity=0.5, t_offset=0.0, evidence={})
+    job = _PendingJob(
+        corner_idx=1,
+        trace=trace,
+        events=[evt],
+        winner=evt,
+        top=[evt],
+        now=0.0,
+        self_delta="8 km/h quicker through here than before",
+    )
+    assert job.self_delta == "8 km/h quicker through here than before"
+    # A later corner's delta must not overwrite one already queued.
+    other = _PendingJob(
+        corner_idx=2,
+        trace=trace,
+        events=[evt],
+        winner=evt,
+        top=[evt],
+        now=1.0,
+        self_delta="18 km/h slower through here",
+    )
+    assert job.self_delta != other.self_delta
