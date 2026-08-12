@@ -321,3 +321,53 @@ def test_clean_corner_after_faulty_sequence_is_not_a_compliment() -> None:
 
     # The survivor (clean corner + folded faults) must NOT get the compliment prompt.
     assert systems[-1] != COMPLIMENT_SYSTEM_PROMPT
+
+
+# --- holding a cue past usefulness ------------------------------------------
+
+
+def test_slow_corners_and_hairpins_are_never_held():
+    """A logged hairpin was diagnosed correctly, held the full six seconds
+    waiting for a window that never opened, and landed two corners later."""
+    from gt7coach.coach.advisor import _corner_deserves_immediate_advice, _PendingJob
+    from gt7coach.detectors import CornerTrace
+    from tests._synth import make_packet
+
+    class _Typed(CornerTrace):
+        _forced = "hairpin"
+
+        @property
+        def corner_type(self) -> str:
+            return self._forced
+
+    fast = [make_packet(recv_time=i / 60, speed_kmh=200.0) for i in range(40)]
+    slow = [make_packet(recv_time=i / 60, speed_kmh=60.0) for i in range(40)]
+
+    hairpin = _Typed(packets=fast)
+    job = _PendingJob(corner_idx=1, trace=hairpin, events=[], winner=None, top=[], now=0.0)
+    assert _corner_deserves_immediate_advice(job) is True, "a hairpin must not be held"
+
+    slow_trace = CornerTrace(packets=slow)
+    job = _PendingJob(corner_idx=2, trace=slow_trace, events=[], winner=None, top=[], now=0.0)
+    assert _corner_deserves_immediate_advice(job) is True, "a slow corner must not be held"
+
+
+def test_a_quick_flat_corner_may_still_wait_for_a_window():
+    from gt7coach.coach.advisor import _corner_deserves_immediate_advice, _PendingJob
+    from gt7coach.detectors import CornerTrace
+    from tests._synth import make_packet
+
+    quick = CornerTrace(packets=[make_packet(recv_time=i / 60, speed_kmh=220.0) for i in range(20)])
+    job = _PendingJob(corner_idx=3, trace=quick, events=[], winner=None, top=[], now=0.0)
+    assert _corner_deserves_immediate_advice(job) is False
+
+
+def test_a_severe_fault_is_spoken_even_on_a_fast_corner():
+    from gt7coach.coach.advisor import _corner_deserves_immediate_advice, _PendingJob
+    from gt7coach.detectors import CornerTrace, Event
+    from tests._synth import make_packet
+
+    quick = CornerTrace(packets=[make_packet(recv_time=i / 60, speed_kmh=220.0) for i in range(20)])
+    bad = Event(type="braking.lockup", severity=0.95, t_offset=0.0, evidence={})
+    job = _PendingJob(corner_idx=4, trace=quick, events=[bad], winner=bad, top=[bad], now=0.0)
+    assert _corner_deserves_immediate_advice(job) is True

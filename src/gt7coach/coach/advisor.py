@@ -306,6 +306,24 @@ def _summarise_superseded(job: _PendingJob) -> str:
 # ---- Advisor ----------------------------------------------------------------
 
 
+# Slow corners are where lap time is won and lost, and they are exactly the
+# corners whose advice is most often held past usefulness: they take longest to
+# drive, so the next apex arrives before the cue fits.
+_IMMEDIATE_CORNER_TYPES = frozenset({"hairpin", "slow_corner"})
+_IMMEDIATE_MIN_SPEED_KMH = 90.0
+
+
+def _corner_deserves_immediate_advice(job: _PendingJob) -> bool:
+    """True when holding this corner's cue would waste it."""
+    trace = job.trace
+    if trace.corner_type in _IMMEDIATE_CORNER_TYPES:
+        return True
+    if trace.min_speed_kmh <= _IMMEDIATE_MIN_SPEED_KMH:
+        return True
+    # A serious fault is worth hearing late-ish rather than not at all.
+    return bool(job.winner is not None and job.winner.severity >= 0.85)
+
+
 class Advisor:
     """Owns the per-corner coaching policy + the LLM worker thread."""
 
@@ -643,6 +661,18 @@ class Advisor:
         if sched.clearance(duration):
             return True
         if self._worker_thread is None:
+            return True
+        # Holding a cue for a corner that mattered is worse than overlapping
+        # the next one. A logged hairpin was diagnosed correctly, held the full
+        # six seconds waiting for a window that never opened, and arrived two
+        # corners downstream — indistinguishable from saying nothing. Where the
+        # lap time actually lives, speak now.
+        if _corner_deserves_immediate_advice(job):
+            log.info(
+                "cue spoken immediately: %s is where the time is, and late "
+                "advice about it is wasted",
+                job.trace.corner_type,
+            )
             return True
         deadline = time.monotonic() + sched.config.max_hold_s
         # Query once — the telemetry thread can flip it to None between calls.

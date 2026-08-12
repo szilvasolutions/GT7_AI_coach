@@ -84,7 +84,14 @@ class LockupConfig:
 
     min_brake: int = 150  # only count frames where the driver is actually braking
     min_speed_kmh: float = 30.0  # below this, locking is normal (you're stopping)
-    max_wheel_rps: float = 10.0  # absolute rad/s; the slowest wheel is "near zero"
+    max_wheel_rps: float = 10.0  # absolute rad/s; fallback when radius is unknown
+    # An absolute rotation threshold only catches a wheel that has stopped:
+    # 10 rad/s is ~12 km/h of surface speed. Real lock-ups are partial — one
+    # logged session had the fronts turning at 78-90% of ground speed while
+    # spinning above 100 rad/s, none of which registered. GT7 sends the tyre
+    # radius, so compare surface speed against road speed instead. Below this
+    # ratio the tyre is sliding more than it is rolling.
+    max_slip_ratio: float = 0.90
     min_duration_s: float = 0.10  # avoid one-frame noise
     full_severity_duration_s: float = 0.50
 
@@ -140,13 +147,26 @@ def detect_lockup(trace: CornerTrace, *, config: LockupConfig | None = None) -> 
             abs(p.wheel_speed_rl),
             abs(p.wheel_speed_rr),
         )
-        if slowest < cfg.max_wheel_rps:
+        # Prefer the slip ratio when the packet carried tyre radii; fall back
+        # to the absolute threshold for captures recorded before they were
+        # parsed, so old fixtures keep behaving as they did.
+        slip = p.front_slip
+        if slip is not None:
+            locked = slip < cfg.max_slip_ratio
+        else:
+            locked = slowest < cfg.max_wheel_rps
+        if locked:
             streak.append((i, slowest, p.speed_kmh))
         else:
             close_streak()
 
     close_streak()
     return events
+
+
+# Below this two packets are effectively the same instant and any derived
+# rate is meaningless.
+_MIN_FRAME_DT_S = 0.005
 
 
 @dataclass(slots=True)
@@ -190,7 +210,11 @@ def detect_trail_off_too_fast(
     best_drop = 0
     for i in range(1, len(packets)):
         dt = packets[i].recv_time - packets[i - 1].recv_time
-        if dt <= 0:
+        # A sub-millisecond gap between two packets turns any pedal movement
+        # into a colossal rate: one logged corner reported a release rate of
+        # 1,375,839 and rode it to severity 1.00, becoming the top event of
+        # the corner. At 60 Hz a real frame gap is ~16.7 ms.
+        if dt < _MIN_FRAME_DT_S:
             continue
         drop = packets[i - 1].brake - packets[i].brake
         if drop <= 0:

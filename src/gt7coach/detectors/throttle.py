@@ -88,6 +88,11 @@ def detect_wheelspin(trace: CornerTrace, *, config: WheelspinConfig | None = Non
     return events
 
 
+# Above this the driver is braking, so the throttle trace belongs to the
+# braking phase rather than to corner exit.
+_SAWING_BRAKE_CUTOFF = 100
+
+
 @dataclass(slots=True)
 class SawingConfig:
     """Tunable thresholds for the throttle-sawing detector."""
@@ -115,6 +120,13 @@ def detect_sawing(trace: CornerTrace, *, config: SawingConfig | None = None) -> 
     # dead-band so we don't count fan-out noise).
     signs: list[int] = [0]
     for i in range(1, len(packets)):
+        # Throttle movement under braking is not sawing. Downshift blips and
+        # left-foot overlap accounted for 49% of the large throttle changes in
+        # one logged session (155 of 319), and every one of them produced
+        # exit-phase advice about a braking-zone event.
+        if packets[i].brake > _SAWING_BRAKE_CUTOFF:
+            signs.append(0)
+            continue
         delta = packets[i].throttle - packets[i - 1].throttle
         if delta > cfg.min_delta:
             signs.append(1)
