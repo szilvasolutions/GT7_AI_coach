@@ -121,6 +121,9 @@ class PyttsxVoiceEngine:
                     # hits the speakers. The leading text reads as a tiny
                     # pause and is essentially inaudible.
                     padded = ". " + text
+                    # Parsed by scripts/build_demo_video.py to sync a screen
+                    # recording against the coach audio — keep the format.
+                    log.info("utterance start #%d: %r", idx, text)
                     engine.say(padded)
                     engine.runAndWait()
                     t_total = time.monotonic() - t0

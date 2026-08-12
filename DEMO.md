@@ -159,3 +159,40 @@ proceed.
 
 Recording is one take. Don't try to splice multiple laps — the lap-end
 summary is sequence-dependent and the demo loses its rhythm if you cut.
+
+---
+
+## Capture without a capture card (PS5 + PC, synced in post)
+
+The setup above assumes one recording. Without a capture card the game
+video and the coach voice can't land in one file — record two and let
+`scripts/build_demo_video.py` sync them:
+
+1. **PC — coach voice.** Audacity ▸ host **Windows WASAPI** ▸ recording
+   device = your output device's **(loopback)** entry. Records exactly
+   what the PC plays — no mic, no drivers. Mute everything else on the
+   PC (Discord, browser, notifications): the sync step detects speech
+   onsets and any stray sound breaks the fit. Start recording, then
+   start the coach.
+2. **PS5 — gameplay.** Create button ▸ start a new recording before the
+   race countdown (the clip must contain the moment the lap timer
+   starts). Stop after the debrief shot.
+3. **Race.** Start the coach *before* the race goes green — the
+   `race start` log line is the sync anchor between the two recordings.
+4. **Export** the Audacity track as 48 kHz WAV, pull the PS5 clip over,
+   and note the video timestamp where the lap timer starts (scrub once,
+   e.g. `1:23.400`).
+5. **Build:**
+
+   ```powershell
+   python scripts/build_demo_video.py `
+     --video ps5_clip.mp4 --wav coach.wav `
+     --session sessions\run_<ts> `
+     --race-start-video 1:23.400 -o demo.mp4
+   ```
+
+   It fits the WAV's speech onsets against the `utterance start` lines
+   in the session's `debug.log` (offset + drift), refuses to emit
+   anything if the worst residual exceeds 50 ms, then muxes with the
+   game audio sidechain-ducked under the voice. `--dry-run` shows the
+   fit first; `demo.sync.json` records what was applied.

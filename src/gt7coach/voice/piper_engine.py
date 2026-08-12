@@ -167,6 +167,8 @@ class PiperVoiceEngine:
         with wave.open(buf, "wb") as wav:
             self._python_engine.synthesize(text, wav)
         buf.seek(0)
+        # Parsed by scripts/build_demo_video.py — keep the format.
+        log.info("utterance start: %r", text)
         playback = sa.WaveObject.from_wave_read(wave.open(buf, "rb")).play()
         playback.wait_done()
 
@@ -183,6 +185,8 @@ class PiperVoiceEngine:
                 capture_output=True,
                 check=True,
             )
+            # Parsed by scripts/build_demo_video.py — keep the format.
+            log.info("utterance start: %r", text)
             self._play_wav_native(tmp_wav)
         finally:
             try:

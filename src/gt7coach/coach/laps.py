@@ -131,6 +131,12 @@ class LapTracker:
             self._last_lap_count = packet.lap_count
             return None
 
+        # The 0 -> 1 transition is the race start — no lap time yet, but it
+        # is the wall-clock anchor scripts/build_demo_video.py fits a screen
+        # recording against, so log it. Keep the format.
+        if packet.lap_count == 1 and self._last_lap_count == 0:
+            log.info("race start (lap 1 began)")
+
         # Only act on a real increment (not the initial 0 -> 1 lap-1 start;
         # we want the lap-1 -> lap-2 transition because lap_time_ms only
         # becomes valid then).
