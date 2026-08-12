@@ -84,6 +84,22 @@ def is_frozen_bundle() -> bool:
     return getattr(sys, "frozen", False) or hasattr(sys, "_MEIPASS")
 
 
+def can_self_update() -> bool:
+    """True if this install can actually apply an update in place.
+
+    Being frozen isn't enough. The swap is performed by ``updater.exe``,
+    which only ships in the single-folder bundle — the single-file
+    ``GT7Coach.exe`` has nothing beside it, and there is no folder to
+    unpack a new build into. Gate the Download button on the machinery
+    being present rather than on ``sys.frozen``, otherwise the one-file
+    build offers an update, downloads ~96 MB and only then admits it
+    can't install it.
+    """
+    if not is_frozen_bundle():
+        return False
+    return (Path(sys.executable).parent / "updater.exe").is_file()
+
+
 def _parse_version(s: str) -> tuple[int, ...]:
     """Best-effort version parser. Strips a leading ``v``, splits on
     ``.``-``-``-``+`` and converts the leading numeric prefix of each

@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from gt7coach.gui.updater import GITHUB_REPO, USER_AGENT, UpdateInfo
+from gt7coach.gui.updater import GITHUB_REPO, USER_AGENT, UpdateInfo, can_self_update
 
 log = logging.getLogger(__name__)
 
@@ -116,6 +116,18 @@ def run_update_flow(parent: QWidget, info: UpdateInfo) -> None:
     """
     if not info.zip_url:
         QMessageBox.critical(parent, "No download URL", "This release has no Windows zip asset.")
+        return
+
+    # Check the swap machinery exists BEFORE spending a ~96 MB download on
+    # an update we can't apply (the one-file build has no updater.exe).
+    if not can_self_update():
+        QMessageBox.information(
+            parent,
+            "Can't update in place",
+            "This is the single-file GT7Coach.exe, which can't replace itself "
+            "while it's running.\n\nDownload the new version from the release "
+            "page, or switch to the win64.zip build — that one updates itself.",
+        )
         return
 
     zip_name = Path(info.zip_url).name

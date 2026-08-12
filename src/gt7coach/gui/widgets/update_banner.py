@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from gt7coach.gui.updater import UpdateInfo, is_frozen_bundle
+from gt7coach.gui.updater import UpdateInfo, can_self_update, is_frozen_bundle
 
 
 class UpdateBanner(QFrame):
@@ -65,13 +65,14 @@ class UpdateBanner(QFrame):
 
         self._info: UpdateInfo | None = None
         self._frozen = is_frozen_bundle()
+        self._can_install = can_self_update()
 
     def show_for(self, info: UpdateInfo) -> None:
         self._info = info
         self._label.setText(
             f"<b>Update available:</b> {info.tag} — {info.name}. <i>Restart after install.</i>"
         )
-        if self._frozen and info.zip_url:
+        if self._can_install and info.zip_url:
             self._download_btn.setEnabled(True)
             self._download_btn.setToolTip("Download and install the new build, then relaunch.")
         else:
@@ -80,6 +81,20 @@ class UpdateBanner(QFrame):
                 self._download_btn.setToolTip(
                     "No Windows installer asset on this release. "
                     "Use 'View release' for download options."
+                )
+            elif self._frozen:
+                # One-file GT7Coach.exe: frozen, but no updater.exe beside
+                # it and no install folder to swap. Say so here rather than
+                # after a 96 MB download.
+                self._label.setText(
+                    f"<b>Update available:</b> {info.tag} — {info.name}. "
+                    "<i>The single-file build can't update itself — "
+                    "use 'View release' to download it.</i>"
+                )
+                self._download_btn.setToolTip(
+                    "The one-file GT7Coach.exe can't replace itself while running.\n"
+                    "Download the new GT7Coach.exe from the release page, or switch\n"
+                    "to the win64.zip build, which does update in place."
                 )
             else:
                 self._download_btn.setToolTip(

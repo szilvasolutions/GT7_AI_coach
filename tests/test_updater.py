@@ -11,6 +11,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import sys
 import time
 
 import pytest
@@ -200,3 +201,49 @@ def test_worker_emits_error_on_network_failure(qapp, monkeypatch, tmp_path) -> N
     # The worker swallows the URLError and emits a generic "network or API error"
     # rather than the raw exception. Either way it must NOT have raised.
     assert isinstance(received[0], str)
+
+
+# --- can_self_update: folder bundle vs single-file exe ----------------------
+
+
+def test_can_self_update_false_when_not_frozen(monkeypatch):
+    monkeypatch.delattr(sys, "frozen", raising=False)
+    monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+    assert up.can_self_update() is False
+
+
+def test_can_self_update_true_for_folder_bundle(monkeypatch, tmp_path):
+    """The win64.zip layout ships updater.exe next to GT7Coach.exe."""
+    (tmp_path / "GT7Coach.exe").write_bytes(b"stub")
+    (tmp_path / "updater.exe").write_bytes(b"stub")
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(tmp_path / "GT7Coach.exe"))
+    assert up.can_self_update() is True
+
+
+def test_can_self_update_false_for_single_file_exe(monkeypatch, tmp_path):
+    """Regression: the one-file build is frozen but has no updater.exe, and
+    used to offer an update that failed only after a ~96 MB download."""
+    (tmp_path / "GT7Coach.exe").write_bytes(b"stub")
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "_MEIPASS", "/tmp/_MEI123456", raising=False)
+    monkeypatch.setattr(sys, "executable", str(tmp_path / "GT7Coach.exe"))
+    assert up.is_frozen_bundle() is True
+    assert up.can_self_update() is False
+
+
+def test_release_with_both_assets_still_picks_the_zip(monkeypatch):
+    """Since v0.1.1 a release carries GT7Coach.exe as well as the zip; the
+    updater must keep choosing the zip."""
+    release = {
+        "assets": [
+            {"name": "GT7Coach.exe", "browser_download_url": "https://x/GT7Coach.exe"},
+            {
+                "name": "GT7Coach-v9.9.9-win64.zip",
+                "browser_download_url": "https://x/GT7Coach-v9.9.9-win64.zip",
+            },
+            {"name": "SHA256SUMS.txt", "browser_download_url": "https://x/SHA256SUMS.txt"},
+        ]
+    }
+    monkeypatch.setattr(up.platform, "system", lambda: "Windows")
+    assert up._pick_zip_asset(release) == "https://x/GT7Coach-v9.9.9-win64.zip"
