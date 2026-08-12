@@ -72,7 +72,18 @@ jobs:
               Get-Content $log
               echo "---------------------------"
             } else {
-              echo "no install-log.txt written - the stub never started PowerShell"
+              echo "no install-log.txt written"
+            }
+            # The stub generates this; dumping it catches a malformed script
+            # (bad quoting, mangled substitutions) that would otherwise just
+            # look like a hang.
+            $ps1 = Join-Path $env:TEMP 'gt7coach-install.ps1'
+            if (Test-Path $ps1) {
+              echo "----- generated gt7coach-install.ps1 -----"
+              Get-Content $ps1
+              echo "------------------------------------------"
+            } else {
+              echo "the stub never wrote gt7coach-install.ps1"
             }
             throw "the stub did not produce $exe - install failed or timed out"
           }

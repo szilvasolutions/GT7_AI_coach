@@ -35,12 +35,13 @@
 
 /* Written to %TEMP% and handed to powershell -File. Kept as one string so
  * it stays diffable against the .bat. */
-static const wchar_t *PS_SCRIPT =
+static const wchar_t *PS_HEAD =
     L"$ErrorActionPreference='Stop'\n"
     L"$ProgressPreference='SilentlyContinue'\n"
-    L"[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12\n"
-    L"$dest='%s'\n"
-    L"$silent=$%s\n"
+    L"[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12\n";
+
+/* $dest and $silent are written between HEAD and BODY by write_script(). */
+static const wchar_t *PS_BODY =
     L"try{Start-Transcript -Path (Join-Path $dest 'install-log.txt') -Force|Out-Null}catch{}\n"
     L"Write-Host ''\n"
     L"Write-Host '  GT7 AI Coach - downloading the app' -ForegroundColor Cyan\n"
@@ -49,15 +50,17 @@ static const wchar_t *PS_SCRIPT =
     L"  $h=@{'User-Agent'='gt7coach-installer'}\n"
     L"  $r=Invoke-RestMethod "
     L"'https://api.github.com/repos/szilvasolutions/GT7_AI_coach/releases/latest' "
-    L"-Headers $h -UseBasicParsing\n"
+    L"-Headers $h -UseBasicParsing -TimeoutSec 60\n"
     L"  $a=$r.assets|Where-Object{$_.name -like '*win64.zip'}|Select-Object -First 1\n"
     L"  if(-not $a){throw 'the latest release has no win64 zip'}\n"
     L"  $zip=Join-Path $env:TEMP $a.name\n"
     L"  Write-Host ('  Downloading ' + $a.name + ' (' + [math]::Round($a.size/1MB) + ' MB) ...')\n"
-    L"  Invoke-WebRequest $a.browser_download_url -OutFile $zip -Headers $h -UseBasicParsing\n"
+    L"  Invoke-WebRequest $a.browser_download_url -OutFile $zip -Headers $h "
+    L"-UseBasicParsing -TimeoutSec 900\n"
     L"  $s=$r.assets|Where-Object{$_.name -eq 'SHA256SUMS.txt'}|Select-Object -First 1\n"
     L"  if($s){\n"
-    L"    $sums=(Invoke-WebRequest $s.browser_download_url -Headers $h -UseBasicParsing).Content\n"
+    L"    $sums=(Invoke-WebRequest $s.browser_download_url -Headers $h "
+    L"-UseBasicParsing -TimeoutSec 60).Content\n"
     L"    $want=($sums -split \"`n\"|Where-Object{$_ -match [regex]::Escape($a.name)}|"
     L"Select-Object -First 1) -split '\\s+'|Select-Object -First 1\n"
     L"    $got=(Get-FileHash -Algorithm SHA256 $zip).Hash.ToLower()\n"
@@ -138,7 +141,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR args, int show) {
     /* _snwprintf leaves the buffer unterminated when it truncates, so bail
      * on a negative return and terminate by hand otherwise. */
     wchar_t script[MAX_PATH];
-    if (_snwprintf(script, MAX_PATH, L"%sgt7coach-install.ps1", tmp) < 0) {
+    if (_snwprintf(script, MAX_PATH, L"%lsgt7coach-install.ps1", tmp) < 0) {
         MessageBoxW(NULL, L"Temp path too long.", APP_TITLE, MB_ICONERROR | MB_OK);
         return 1;
     }
@@ -150,11 +153,20 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR args, int show) {
                     APP_TITLE, MB_ICONERROR | MB_OK);
         return 1;
     }
-    fwprintf(f, PS_SCRIPT, dir, is_silent ? L"true" : L"false");
+    /* Written piece by piece rather than with a format string: in a wide
+     * format, "%s" means char* under C's rules and wchar_t* under MSVC's,
+     * and mingw picks between them depending on which stdio it links. The
+     * mismatch produced a garbled script that left PowerShell hung. */
+    fputws(PS_HEAD, f);
+    fputws(L"$dest='", f);
+    fputws(dir, f);
+    fputws(L"'\n", f);
+    fputws(is_silent ? L"$silent=$true\n" : L"$silent=$false\n", f);
+    fputws(PS_BODY, f);
     fclose(f);
 
     wchar_t params[MAX_PATH + 64];
-    if (_snwprintf(params, MAX_PATH + 64, L"-NoProfile -ExecutionPolicy Bypass -File \"%s\"",
+    if (_snwprintf(params, MAX_PATH + 64, L"-NoProfile -ExecutionPolicy Bypass -File \"%ls\"",
                    script) < 0) {
         MessageBoxW(NULL, L"Temp path too long.", APP_TITLE, MB_ICONERROR | MB_OK);
         return 1;
