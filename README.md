@@ -1,23 +1,35 @@
+<div align="center">
+
 # GT7 AI Coach
 
-[![Latest release](https://img.shields.io/github/v/release/szilvasolutions/GT7_AI_coach?label=download&color=2ea043)](https://github.com/szilvasolutions/GT7_AI_coach/releases/latest)
+**A real-time AI driving coach that talks to you while you drive Gran Turismo 7.**
 
-> ## 🖥️ Just want to use it on Windows?
->
-> ### ➡️ [**Download `GT7Coach.exe`**](https://github.com/szilvasolutions/GT7_AI_coach/releases/latest/download/GT7Coach.exe) ⬅️
->
-> One file. Double-click it and the coach opens. No install, no unzip,
-> no Python. (Windows will say it's from an unknown publisher — click
-> *More info* ▸ *Run anyway*. First launch takes ~10 s while it unpacks.)
->
-> Prefer it to start instantly? Take `GT7Coach-vX.Y.Z-win64.zip` from the
-> same [releases page](https://github.com/szilvasolutions/GT7_AI_coach/releases/latest)
-> instead, unzip it and run `GT7Coach\GT7Coach.exe` — same app, faster
-> startup, and it can update itself.
->
-> ⚠️ The green **Code ▸ Download ZIP** button gives you the *source code*,
-> not the app. If you already grabbed it, double-click
-> **`!INSTALL-WINDOWS-APP.bat`** inside and it fetches the app for you.
+### [![Download GT7Coach.exe](https://img.shields.io/badge/⬇%20DOWNLOAD-GT7Coach.exe-2ea043?style=for-the-badge&logo=windows&logoColor=white&labelColor=1f6feb)](https://github.com/szilvasolutions/GT7_AI_coach/releases/latest/download/GT7Coach.exe)
+
+**One file. Double-click it. That is the entire install.**
+
+No Python, no unzipping, nothing to set up first.
+
+</div>
+
+<table>
+<tr><td>
+
+**⚠️ Don't use the green `Code ▸ Download ZIP` button** — that gives you the
+source code (what programmers need), not the app. If you already downloaded it,
+just double-click **`!CLICK-ME-TO-INSTALL.bat`** inside and the app installs itself.
+
+**First launch:** Windows shows *"unknown publisher"* → click **More info** →
+**Run anyway**. The window takes ~10 seconds to appear the first time.
+
+**Want it to start instantly?** Grab `GT7Coach-vX.Y.Z-win64.zip` from the
+[releases page](https://github.com/szilvasolutions/GT7_AI_coach/releases/latest)
+instead — same app in a folder, opens immediately, and updates itself.
+
+</td></tr>
+</table>
+
+---
 
 Open-source real-time AI driving coach for **Gran Turismo 7** on PS4 / PS5.
 
@@ -81,17 +93,23 @@ replay path; live UDP needs the PS5 to be reachable on the LAN.
 
 ## Download (Windows binary)
 
-The easiest path on Windows is the pre-built bundle. No Python, no
-git, no command line.
+Two builds of the same app, both on the
+[latest release page](https://github.com/szilvasolutions/GT7_AI_coach/releases/latest).
+No Python, no git, no command line either way.
 
-1. Go to the [latest release page](https://github.com/szilvasolutions/GT7_AI_coach/releases/latest).
-2. Download `GT7Coach-vX.Y.Z-win64.zip`.
-3. Unzip somewhere with write access (e.g. `C:\GT7Coach\`). **Avoid
-   `Program Files`** — the in-app updater needs to write into the
-   install folder.
-4. Double-click `GT7Coach.exe`.
-5. On first launch, use **Tools → Configure** to pick a provider and
-   paste your API key. Then **Start**.
+**`GT7Coach.exe`** — one file, nothing beside it. Put it in its own
+folder (it writes `config.yaml`, `.env` and `sessions/` next to itself)
+and double-click. Every launch unpacks the app to `%TEMP%` first, so the
+window takes ~10 s to appear and **Start** pays that again.
+
+**`GT7Coach-vX.Y.Z-win64.zip`** — the same app as a folder. Unzip
+somewhere with write access (e.g. `C:\GT7Coach\`, **not** `Program
+Files` — the in-app updater writes into its own folder), then run
+`GT7Coach.exe` inside. Starts instantly and can update itself. This is
+the one to use if you run the coach regularly.
+
+Either way: on first launch use **Tools → Configure** to pick a provider
+and paste your API key, then hit **Start**.
 
 Windows SmartScreen will warn about an unknown publisher on first
 launch — click "More info" → "Run anyway". Code-signing is on the
@@ -291,8 +309,8 @@ Anthropic / Ollama.
 
 ## Architecture
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full design,
-[PHASE_1_NOTES.md](./PHASE_1_NOTES.md) through Phase 7 notes for what
+See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for the full design,
+[docs/PHASE_1_NOTES.md](./docs/PHASE_1_NOTES.md) through Phase 7 notes for what
 shipped in each milestone, and the per-module docstrings in `src/gt7coach/`
 for the implementation details.
 

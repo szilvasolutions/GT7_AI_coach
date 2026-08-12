@@ -34,6 +34,7 @@ from gt7coach.coach import (
 )
 from gt7coach.coach.cue_timing import CueScheduler
 from gt7coach.coach.laps import LapTracker
+from gt7coach.config import ConfigError, looks_like_gt7_config
 from gt7coach.config import load as load_config
 from gt7coach.detectors import (
     CornerSegmenter,
@@ -355,8 +356,23 @@ def main(argv: list[str] | None = None) -> int:
 
     cfg_path = args.config
     if cfg_path is None and Path("config.yaml").is_file():
-        cfg_path = Path("config.yaml")
-    cfg = load_config(cfg_path)
+        # Only adopt a config we didn't ask for if it's actually ours.
+        # "config.yaml" is a common filename — Home Assistant, Docker
+        # Compose and friends all use it — and the frozen .exe runs with
+        # whatever directory Explorer hands it as the cwd.
+        if looks_like_gt7_config("config.yaml"):
+            cfg_path = Path("config.yaml")
+        else:
+            log.warning(
+                "ignoring %s — it doesn't look like a gt7coach config; "
+                "using defaults (pass --config to point somewhere else)",
+                Path("config.yaml").resolve(),
+            )
+    try:
+        cfg = load_config(cfg_path)
+    except ConfigError as exc:
+        log.error("%s", exc)
+        return 2
 
     provider_name, provider_reason = _select_provider(
         args.provider, cfg.coach_provider, args.api_key

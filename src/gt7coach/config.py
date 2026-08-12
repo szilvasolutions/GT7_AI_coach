@@ -236,8 +236,65 @@ def save(cfg: LoadedConfig, path: str | Path) -> None:
     )
 
 
+class ConfigError(Exception):
+    """A config file was named explicitly but can't be used."""
+
+
+# Top-level keys _merge knows about. Used to tell our config.yaml apart from
+# somebody else's — "config.yaml" is a very popular filename, and the coach
+# auto-picks one up from the working directory.
+KNOWN_SECTIONS = frozenset(
+    {"network", "coach", "voice", "session", "detectors", "cue_timing", "vr_alerts"}
+)
+
+
+def _parse_yaml(p: Path) -> dict[str, Any]:
+    """Parse ``p`` as a YAML mapping, or raise ConfigError explaining why not."""
+    try:
+        import yaml
+    except ImportError as exc:
+        raise RuntimeError("PyYAML is required to load config.yaml. pip install PyYAML") from exc
+
+    try:
+        text = p.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise ConfigError(f"{p} cannot be read: {exc}") from exc
+
+    try:
+        raw = yaml.safe_load(text)
+    except yaml.YAMLError as exc:
+        # Covers foreign dialects too: Home Assistant's `!include`, Docker
+        # Compose anchors that reference undefined aliases, and so on.
+        raise ConfigError(f"{p} is not valid YAML that gt7coach can read: {exc}") from exc
+
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise ConfigError(f"{p} must contain a YAML mapping, not {type(raw).__name__}")
+    return raw
+
+
+def looks_like_gt7_config(path: str | Path) -> bool:
+    """True if ``path`` parses and carries at least one section we understand.
+
+    Deliberately total: any failure means "not ours", because the only
+    caller is the auto-discovery path, which must never crash on a file it
+    merely guessed at.
+    """
+    try:
+        raw = _parse_yaml(Path(path))
+    except (ConfigError, RuntimeError):
+        return False
+    return bool(KNOWN_SECTIONS & raw.keys())
+
+
 def load(path: str | Path | None = None) -> LoadedConfig:
-    """Load ``config.yaml`` if it exists; otherwise return defaults."""
+    """Load ``config.yaml`` if it exists; otherwise return defaults.
+
+    Raises :class:`ConfigError` if ``path`` exists but isn't a usable config
+    — callers that guessed the path should check
+    :func:`looks_like_gt7_config` first.
+    """
     cfg = default_config()
     if path is None:
         return cfg
@@ -246,12 +303,13 @@ def load(path: str | Path | None = None) -> LoadedConfig:
         log.warning("config file %s not found; using defaults", p)
         return cfg
 
-    try:
-        import yaml
-    except ImportError as exc:
-        raise RuntimeError("PyYAML is required to load config.yaml. pip install PyYAML") from exc
-
-    raw = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+    raw = _parse_yaml(p)
+    if raw and not (KNOWN_SECTIONS & raw.keys()):
+        raise ConfigError(
+            f"{p} has none of the sections gt7coach understands "
+            f"({', '.join(sorted(KNOWN_SECTIONS))}) — is this another program's "
+            "config file? See config.example.yaml."
+        )
     return _merge(cfg, raw)
 
 

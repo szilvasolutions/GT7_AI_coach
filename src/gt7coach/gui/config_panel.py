@@ -32,7 +32,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from gt7coach.config import LoadedConfig, default_config, load, save
+from gt7coach.config import (
+    LoadedConfig,
+    default_config,
+    load,
+    looks_like_gt7_config,
+    save,
+)
 
 log = logging.getLogger(__name__)
 
@@ -303,6 +309,21 @@ class ConfigDialog(QDialog):
         cfg.vr_alerts.coolant_enabled = bool(self._vr_coolant.isChecked())
         cfg.vr_alerts.shift_assist_enabled = bool(self._vr_shift.isChecked())
         cfg.vr_alerts.self_delta_enabled = bool(self._vr_self_delta.isChecked())
+
+        # Never clobber somebody else's config.yaml. The default path is
+        # ./config.yaml, and the frozen .exe inherits whatever directory
+        # Explorer launched it from — which may already hold an unrelated
+        # config.yaml (Home Assistant's, for one).
+        if self._path.is_file() and not looks_like_gt7_config(self._path):
+            QMessageBox.critical(
+                self,
+                "Refusing to overwrite",
+                f"{self._path}\n\nalready exists and belongs to another program — "
+                "it has none of the sections gt7coach uses. Saving would destroy "
+                "it.\n\nMove GT7Coach.exe to its own folder, or start it from one, "
+                "and try again.",
+            )
+            return
 
         try:
             save(cfg, self._path)
