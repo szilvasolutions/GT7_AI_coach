@@ -267,3 +267,40 @@ def test_self_delta_is_captured_when_queued_not_when_processed():
         self_delta="18 km/h slower through here",
     )
     assert job.self_delta != other.self_delta
+
+
+# --- advice must never worsen the fault it is answering ---------------------
+
+
+def test_contradiction_checker_catches_the_logged_failures():
+    """Real lines from Ádám's sessions. Telling a driver who is locking the
+    fronts to brake later and deeper is how you lock the fronts."""
+    from gt7coach.coach.advisor import contradicts_fault
+
+    for line in (
+        "Brake later and trail into the apex.",
+        "Trail brake deeper into the corner.",
+        "Brake later and deeper into the corner.",
+        "Brake later and be smoother on the throttle.",
+    ):
+        assert contradicts_fault("braking.lockup", line), line
+
+    assert contradicts_fault("braking.late_brake", "Brake later into the corner.")
+    assert contradicts_fault("throttle.early_lift", "Ease the throttle through the apex.")
+    assert contradicts_fault("throttle.wheelspin", "Get on the throttle earlier.")
+
+
+def test_correct_advice_is_not_discarded():
+    from gt7coach.coach.advisor import contradicts_fault
+
+    assert contradicts_fault("braking.lockup", "Trail off the brake sooner.") is None
+    assert contradicts_fault("braking.lockup", "Brake earlier and squeeze the pedal.") is None
+    assert contradicts_fault("braking.late_brake", "Brake earlier into that turn.") is None
+    assert contradicts_fault("throttle.early_lift", "Carry throttle through the apex.") is None
+    # "you're lifting too soon" is a correct diagnosis, not an instruction to lift
+    assert (
+        contradicts_fault(
+            "throttle.early_lift", "Hold throttle longer through the apex; you're lifting too soon."
+        )
+        is None
+    )

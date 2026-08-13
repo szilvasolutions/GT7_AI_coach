@@ -117,12 +117,37 @@ class LapTracker:
     _best_lap_ms: int = field(default=-1, init=False)
     _current_lap_event_counts: Counter[str] = field(default_factory=Counter, init=False)
     _seen_first_packet: bool = field(default=False, init=False)
+    _race_finished: bool = field(default=False, init=False)
+    # Last few spoken summaries, so the LLM can be told not to repeat itself.
+    # Without this every lap with the same dominant fault produced the same
+    # line — one session said "Focus on hitting your apexes" on four laps
+    # out of five.
+    _recent_summaries: list[str] = field(default_factory=list, init=False)
 
     history: list[dict] = field(default_factory=list, init=False)
 
     def feed_events(self, events: list[Event]) -> None:
         for e in events:
             self._current_lap_event_counts[e.type] += 1
+
+    @property
+    def race_finished(self) -> bool:
+        return self._race_finished
+
+    def _check_race_finished(self, packet: Packet) -> bool:
+        """True on the frame a race ends.
+
+        GT7 sends the race length in ``race_laps``; once the lap counter has
+        gone past it the chequered flag is out. Nothing was reading that
+        field, so the coach carried on as if the race were still running and
+        the debrief never came.
+        """
+        if self._race_finished or packet.race_laps <= 0:
+            return False
+        if packet.lap_count > packet.race_laps:
+            self._race_finished = True
+            return True
+        return False
 
     def feed_packet(self, packet: Packet) -> str | None:
         """Watch for lap transitions; return the spoken summary if one was just delivered."""
@@ -136,6 +161,10 @@ class LapTracker:
         # recording against, so log it. Keep the format.
         if packet.lap_count == 1 and self._last_lap_count == 0:
             log.info("race start (lap 1 began)")
+
+        if self._check_race_finished(packet):
+            log.info("race finished (lap %d of %d)", packet.lap_count, packet.race_laps)
+            return self._on_race_finished()
 
         # Only act on a real increment (not the initial 0 -> 1 lap-1 start;
         # we want the lap-1 -> lap-2 transition because lap_time_ms only
@@ -154,6 +183,14 @@ class LapTracker:
 
         self._last_lap_count = max(self._last_lap_count, packet.lap_count)
         return None
+
+    def _on_race_finished(self) -> str:
+        """Speak a closing line the moment the chequered flag falls."""
+        best = _format_lap_time(self._best_lap_ms) if self._best_lap_ms > 0 else ""
+        text = f"That's the race. Best lap {best}." if best else "That's the race."
+        self.voice.interrupt(text)
+        log.info("race finished: %s", text)
+        return text
 
     @property
     def best_lap_ms(self) -> int:
@@ -212,6 +249,8 @@ class LapTracker:
             text = self._llm_or_canned_summary(last_lap_ms, delta_ms, counts, is_pb)
             self.voice.interrupt(text)
 
+        self._recent_summaries.append(text)
+        del self._recent_summaries[:-3]
         log.info("lap %d done (%s): %s", self._last_lap_count, mode, text)
         try:
             from gt7coach import status as _status
@@ -246,6 +285,13 @@ class LapTracker:
         is_pb: bool,
     ) -> str:
         lines = [f"Driver style: {self.driver_style}."]
+        if self._recent_summaries:
+            said = "; ".join(f'"{t}"' for t in self._recent_summaries)
+            lines.append(
+                f"You already told this driver: {said}. Do NOT repeat the same "
+                "advice — either coach a different fault or, if the same one "
+                "persists, say something new about it."
+            )
         lines.append(f"Just finished lap. Lap time: {_format_lap_time(last_lap_ms)}.")
         if is_pb:
             lines.append("This is a personal best.")

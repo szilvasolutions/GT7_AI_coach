@@ -14,7 +14,9 @@ from time import monotonic
 
 @dataclass(slots=True)
 class RateLimiterConfig:
-    global_cooldown_s: float = 4.0
+    # 4.0 s read as too quiet in testing and 2.5 s as slightly busy, so split
+    # the difference. This is the single biggest lever on how the coach feels.
+    global_cooldown_s: float = 3.5
     duplicate_window_s: float = 30.0
 
 

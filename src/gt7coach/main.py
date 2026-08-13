@@ -53,6 +53,7 @@ from gt7coach.detectors import (
     detect_understeer,
     detect_wheelspin,
 )
+from gt7coach.keep_awake import KeepAwake
 from gt7coach.session import SessionLogger, summarise
 from gt7coach.telemetry import Packet, Receiver, ReceiverConfig, replay_csv
 from gt7coach.tracks import TrackDetector
@@ -298,8 +299,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument(
         "--cooldown",
         type=float,
-        default=4.0,
-        help="Global rate-limit between advices, seconds (default: 4)",
+        default=None,
+        help="Global rate-limit between advices, seconds (default: from config, 3.5)",
     )
     p.add_argument(
         "--car-class",
@@ -492,9 +493,11 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     rate_limiter_cfg = RateLimiterConfig(
-        global_cooldown_s=args.cooldown
-        if args.cooldown != 4.0
-        else cfg.rate_limiter.global_cooldown_s,
+        # None means "not given" — the old sentinel was the default value
+        # itself, so asking explicitly for the default was silently ignored.
+        global_cooldown_s=(
+            args.cooldown if args.cooldown is not None else cfg.rate_limiter.global_cooldown_s
+        ),
         duplicate_window_s=cfg.rate_limiter.duplicate_window_s,
     )
     car_class = args.car_class if args.car_class is not None else cfg.coach_car_class
@@ -604,6 +607,11 @@ def main(argv: list[str] | None = None) -> int:
             log.warning("--track override failed: %s", exc)
 
     corner_idx = 0
+    # Two logged sessions went silent because the laptop slept mid-race. Hold
+    # sleep off for as long as the coach is running; released in the finally.
+    keep_awake = KeepAwake()
+    if args.source == "live":
+        keep_awake.acquire()
     # A live console is authoritative about its own flags; a CSV capture may
     # predate them. Freeze detection applies either way.
     live = args.source == "live"
@@ -716,6 +724,7 @@ def main(argv: list[str] | None = None) -> int:
                 session.log_corner(corner_idx, trailing, trailing_events)
             advisor.on_corner(trailing, trailing_events, corner_idx=corner_idx)
     finally:
+        keep_awake.release()
         if rx is not None:
             rx.stop()
         # Let the async coach worker drain any in-flight LLM call before we

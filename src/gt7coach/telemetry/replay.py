@@ -59,6 +59,7 @@ _FIELD_DEFAULTS: dict[str, int | float] = {
     "roll_rate": 0.0,
     "pitch_rate": 0.0,
     "steer_rate": 0.0,
+    "race_laps": 0,
 }
 
 

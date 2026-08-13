@@ -70,7 +70,7 @@ def format_vr_phrase(event: Event) -> str | None:
 # dropped anyway. These are deliberately generous.
 _LOCAL_COOLDOWN_S: dict[str, float] = {
     "vr.tyre_hot": 30.0,
-    "vr.tyre_cold": 30.0,
+    "vr.tyre_cold": 180.0,  # a warm-up message, not a running commentary
     "vr.low_fuel": 60.0,
     "vr.fuel_critical": 20.0,
     "vr.oil_hot": 45.0,
@@ -87,6 +87,12 @@ class VRAlertDetector:
 
     cfg: VRAlertsConfig
     _last_fired: dict[str, float] = field(default_factory=dict)
+    # Hottest tyre seen this session. The fixed 60 C floor is a racing-slick
+    # number: a road car on sport tyres runs cooler by design, and one logged
+    # Nordschleife race sat below 60 C for 38% of its distance and got nine
+    # "tires cold" calls for temperatures that were simply normal for that
+    # car. Learn what this car actually runs at and judge against that.
+    _peak_tyre_c: float = 0.0
 
     # Fuel-burn tracking: learn average litres/lap from lap transitions.
     _fuel_burn_per_lap: float | None = None
@@ -140,9 +146,14 @@ class VRAlertDetector:
                 t_offset=0.0,
                 evidence={"tyre": lbl, "temp_c": round(t, 1)},
             )
-        cold = [
-            (t, lbl) for t, lbl in zip(temps, labels, strict=True) if t <= self.cfg.tyre_temp_cold_c
-        ]
+        # Judge "cold" against what this car's tyres actually run at, not
+        # against a racing-slick constant. Until the car has shown a real
+        # operating temperature, fall back to the configured floor.
+        self._peak_tyre_c = max(self._peak_tyre_c, max(temps))
+        cold_threshold = self.cfg.tyre_temp_cold_c
+        if self._peak_tyre_c > 0.0:
+            cold_threshold = min(cold_threshold, self._peak_tyre_c * 0.85)
+        cold = [(t, lbl) for t, lbl in zip(temps, labels, strict=True) if t <= cold_threshold]
         if cold and self._cooled_down("vr.tyre_cold", p.recv_time):
             t, lbl = min(cold, key=lambda x: x[0])
             self._last_fired["vr.tyre_cold"] = p.recv_time

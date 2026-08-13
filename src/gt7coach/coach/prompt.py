@@ -153,6 +153,52 @@ Examples of BAD responses:
 """
 
 
+# The physical correction each fault demands, and the advice that would make
+# it worse. Measured over four logged sessions, the model contradicted the
+# detected fault in roughly half its lines, and told the driver to "brake
+# later and deeper" seven times in response to FRONT LOCKUP — which is
+# precisely how you lock the fronts. Stating the direction removes the room
+# to improvise.
+CORRECTION_DIRECTION: dict[str, tuple[str, str]] = {
+    "braking.late_brake": (
+        "brake EARLIER, or begin the brake sooner and carry it in",
+        "never tell them to brake later or deeper",
+    ),
+    "braking.lockup": (
+        "use LESS brake pressure and release it sooner — the front tyres are already sliding",
+        "never tell them to brake later, deeper or harder",
+    ),
+    "braking.trail_off_too_fast": (
+        "release the brake more gradually so the front stays loaded",
+        "never tell them to release the brake faster or snap off it",
+    ),
+    "throttle.early_lift": (
+        "stay on the throttle longer — they backed out too early",
+        "never tell them to lift, ease off or reduce throttle",
+    ),
+    "throttle.wheelspin": (
+        "feed the throttle in more gently on exit",
+        "never tell them to apply throttle earlier or harder",
+    ),
+    "throttle.sawing": (
+        "hold one steady throttle position instead of pumping it",
+        "never ask for more or less throttle — the problem is the movement",
+    ),
+    "steering.understeer": (
+        "slow the entry and use less steering lock so the front bites",
+        "never tell them to add steering or carry more entry speed",
+    ),
+    "steering.oversteer": (
+        "ease the throttle and let the rear settle before adding power",
+        "never tell them to add throttle or steer more",
+    ),
+    "line.late_apex": (
+        "get to the apex earlier — turn in sooner",
+        "never tell them to apex later or turn in later",
+    ),
+}
+
+
 _STYLE_HINTS: dict[str, str] = {
     "smooth": "The driver is smooth and progressive. Don't critique slow brake build-up.",
     "aggressive": "The driver is aggressive. Lean towards stability and exit-speed advice.",
@@ -287,6 +333,17 @@ def build_user_prompt(
         blocks.append(f"Tyres: {context.tyre_state}.")
 
     blocks.append(f"Detected events:\n{events_lines}")
+
+    # Pin the direction of the correction for the dominant fault. Without it
+    # the model improvised, and improvising about a lockup produces "brake
+    # later and deeper".
+    top = next(iter(events), None)
+    if top is not None and top.type in CORRECTION_DIRECTION:
+        do, dont = CORRECTION_DIRECTION[top.type]
+        blocks.append(
+            f"REQUIRED CORRECTION for the main fault ({top.type}): {do}. "
+            f"Your sentence must tell them to do this, and {dont}."
+        )
 
     if sequence:
         seq_lines = "\n".join(f"- {s}" for s in sequence)

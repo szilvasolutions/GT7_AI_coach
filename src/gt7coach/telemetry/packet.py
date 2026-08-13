@@ -172,6 +172,10 @@ class Packet:
     roll_rate: float = 0.0  # angular velocity about the longitudinal axis
     pitch_rate: float = 0.0  # ...and about the lateral axis
     steer_rate: float = 0.0  # B-format only; 0.0 on an A-format packet
+    # Total laps in this race, 0 outside a race. GT7 sends it and we never
+    # read it, which is why the coach could not tell that a race had ended:
+    # it only ever saw lap_count going up.
+    race_laps: int = 0
 
     @property
     def speed_kmh(self) -> float:
@@ -288,6 +292,7 @@ def parse_packet(buf: bytes, recv_time: float | None = None) -> Packet:
         steer_rate=(
             _f32(buf, _OFF_STEER_RATE_RAD_PER_SEC) if len(buf) >= B_FORMAT_MIN_SIZE else 0.0
         ),
+        race_laps=_S16.unpack_from(buf, _OFF_RACE_LAPS)[0],
     )
 
 

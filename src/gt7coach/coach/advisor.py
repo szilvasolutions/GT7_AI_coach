@@ -89,6 +89,43 @@ _COMPLIMENT_FALLBACKS: tuple[str, ...] = (
 )
 
 
+# Phrases that would make each fault worse. A small fast model does not
+# reliably follow the prompt's REQUIRED CORRECTION line, and telling a driver
+# who is locking the fronts to "brake later and deeper" is worse than saying
+# nothing at all — it happened seven times across four logged sessions.
+_CONTRADICTIONS: dict[str, tuple[str, ...]] = {
+    "braking.late_brake": ("brake later", "later on the brake", "brake deeper", "brake harder"),
+    "braking.lockup": (
+        "brake later",
+        "brake deeper",
+        "brake harder",
+        "more brake",
+        "later on the brake",
+        "deeper into the corner",
+    ),
+    "braking.trail_off_too_fast": ("release the brake faster", "snap off", "get off the brake"),
+    "throttle.early_lift": ("ease the throttle", "less throttle", "lift earlier", "back out"),
+    "throttle.wheelspin": (
+        "more throttle",
+        "throttle earlier",
+        "earlier throttle",
+        "full throttle",
+    ),
+    "steering.understeer": ("more steering", "more lock", "carry more speed"),
+    "steering.oversteer": ("more throttle", "throttle earlier"),
+    "line.late_apex": ("apex later", "turn in later"),
+}
+
+
+def contradicts_fault(event_type: str, advice: str) -> str | None:
+    """Return the offending phrase if ``advice`` would worsen ``event_type``."""
+    low = advice.lower()
+    for phrase in _CONTRADICTIONS.get(event_type, ()):  # pragma: no branch
+        if phrase in low:
+            return phrase
+    return None
+
+
 def fallback_phrase(event_type: str) -> str:
     return _FALLBACK_PHRASES.get(event_type, "")
 
@@ -610,6 +647,21 @@ class Advisor:
             log.warning("provider returned single-word response %r; using fallback", advice)
             failure_reason = f"too-short-response: {advice!r}"
             advice = ""
+        # Last line of defence: never speak advice that would make the fault
+        # worse, whatever the model produced. The canned phrase is dull but
+        # it is right, and "brake later" to a driver locking the fronts is
+        # actively harmful.
+        if advice and not is_compliment:
+            offending = contradicts_fault(job.winner.type, advice)
+            if offending is not None:
+                log.warning(
+                    "discarding advice %r: %r contradicts %s",
+                    advice,
+                    offending,
+                    job.winner.type,
+                )
+                failure_reason = f"contradicted-fault ({offending})"
+                advice = ""
         if not advice:
             if is_compliment:
                 advice = random.choice(_COMPLIMENT_FALLBACKS)
