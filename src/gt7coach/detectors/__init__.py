@@ -10,9 +10,11 @@ from gt7coach.detectors.base import Event
 from gt7coach.detectors.braking import (
     LateBrakeConfig,
     LockupConfig,
+    NoTrailConfig,
     TrailOffConfig,
     detect_late_brake,
     detect_lockup,
+    detect_no_trail,
     detect_trail_off_too_fast,
 )
 from gt7coach.detectors.corner import CornerSegmenter, CornerSegmenterConfig, CornerTrace
@@ -48,6 +50,7 @@ __all__ = [
     "LateApexConfig",
     "LateBrakeConfig",
     "LockupConfig",
+    "NoTrailConfig",
     "OversteerConfig",
     "SawingConfig",
     "TrailOffConfig",
@@ -59,6 +62,7 @@ __all__ = [
     "detect_late_apex",
     "detect_late_brake",
     "detect_lockup",
+    "detect_no_trail",
     "detect_oversteer",
     "detect_sawing",
     "detect_trail_off_too_fast",

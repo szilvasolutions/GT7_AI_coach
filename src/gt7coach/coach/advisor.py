@@ -69,6 +69,7 @@ _FALLBACK_PHRASES: dict[str, str] = {
     "braking.late_brake": "Brake earlier into that turn next lap.",
     "braking.lockup": "Lockup that lap. Trail off the brake sooner.",
     "braking.trail_off_too_fast": "Release the brake more gradually next time.",
+    "braking.no_trail": "Carry a little brake pressure into the apex next lap.",
     "throttle.wheelspin": "Less throttle on exit next lap.",
     "throttle.sawing": "Smooth the throttle next time through.",
     "throttle.early_lift": "Carry throttle deeper through that turn.",
@@ -104,6 +105,11 @@ _CONTRADICTIONS: dict[str, tuple[str, ...]] = {
         "deeper into the corner",
     ),
     "braking.trail_off_too_fast": ("release the brake faster", "snap off", "get off the brake"),
+    "braking.no_trail": (
+        "release the brake earlier",
+        "get off the brake before",
+        "brake in a straight line only",
+    ),
     "throttle.early_lift": ("ease the throttle", "less throttle", "lift earlier", "back out"),
     "throttle.wheelspin": (
         "more throttle",

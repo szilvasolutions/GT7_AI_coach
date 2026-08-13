@@ -245,3 +245,62 @@ def detect_trail_off_too_fast(
             },
         )
     ]
+
+
+@dataclass(slots=True)
+class NoTrailConfig:
+    """Thresholds for the brake-released-before-apex detector."""
+
+    min_peak_brake: int = 150  # only corners with a real braking phase
+    released_below: int = 30  # brake this low at the slowest point = off it
+    min_coast_s: float = 0.25  # ignore a momentary release right at the apex
+
+
+def detect_no_trail(trace: CornerTrace, *, config: NoTrailConfig | None = None) -> list[Event]:
+    """The driver finished braking before reaching the slowest point.
+
+    Braking in a straight line and coasting to the apex is the most common
+    habit separating a quick amateur from a fast one: the front tyres are
+    unloaded exactly when they are needed to turn, so entry speed has to be
+    given away earlier.
+
+    This is NOT ``trail_off_too_fast``, which measures how *abruptly* the
+    pedal is released. This measures whether any brake pressure survives to
+    the apex at all. Across four logged sessions the driver released fully
+    before the slowest point in 89-98% of braked corners, and because every
+    detector looked at one corner in isolation, nothing ever named it.
+    """
+    cfg = config or NoTrailConfig()
+    packets = trace.packets
+    if len(packets) < 6:
+        return []
+    peak_brake = max(p.brake for p in packets)
+    if peak_brake < cfg.min_peak_brake:
+        return []
+
+    speeds = [p.speed_kmh for p in packets]
+    apex = speeds.index(min(speeds))
+    if packets[apex].brake >= cfg.released_below:
+        return []  # still on the brake at the apex — trailing, as wanted
+
+    # How long has the brake been off before the slowest point?
+    off_since = apex
+    while off_since > 0 and packets[off_since - 1].brake < cfg.released_below:
+        off_since -= 1
+    coast_s = packets[apex].recv_time - packets[off_since].recv_time
+    if coast_s < cfg.min_coast_s:
+        return []
+
+    severity = min(1.0, coast_s / 1.5)
+    return [
+        Event(
+            type="braking.no_trail",
+            severity=severity,
+            t_offset=packets[off_since].recv_time - trace.start_time,
+            evidence={
+                "coast_before_apex_s": round(coast_s, 2),
+                "peak_brake": peak_brake,
+                "brake_at_apex": packets[apex].brake,
+            },
+        )
+    ]

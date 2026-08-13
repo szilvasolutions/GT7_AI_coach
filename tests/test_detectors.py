@@ -18,6 +18,7 @@ from gt7coach.detectors import (
     WheelspinConfig,
     detect_late_brake,
     detect_lockup,
+    detect_no_trail,
     detect_understeer,
     detect_wheelspin,
 )
@@ -445,3 +446,49 @@ def test_a_low_grip_car_still_produces_corners():
 
     assert found_fixed == 0, "baseline: the fixed threshold cannot see this corner"
     assert found_scaled >= 1, "scaled thresholds must detect it"
+
+
+# --- brake released before the apex (the dominant habit in four sessions) ---
+
+
+def _braking_corner(brake_at_apex: int, coast_frames: int = 40):
+    """Decelerate to a minimum, with the brake either carried in or dumped."""
+    pkts = []
+    n = 90
+    for i in range(n):
+        v = 180.0 - 1.2 * i if i < 60 else 108.0 + 1.0 * (i - 60)
+        if i < 60 - coast_frames:
+            brake = 220
+        elif i < 60:
+            brake = brake_at_apex
+        else:
+            brake = 0
+        pkts.append(
+            make_packet(recv_time=i / 60, speed_kmh=v, brake=brake, accel_lat=1.2 * 9.80665)
+        )
+    return CornerTrace(packets=pkts)
+
+
+def test_no_trail_fires_when_the_brake_is_dumped_before_the_apex():
+    """Across four real sessions the driver released fully before the slowest
+    point in 89-98% of braked corners, and nothing ever named it."""
+    events = detect_no_trail(_braking_corner(brake_at_apex=0))
+    assert events, "coasting to the apex must be detected"
+    assert events[0].type == "braking.no_trail"
+    assert events[0].evidence["coast_before_apex_s"] > 0.25
+
+
+def test_no_trail_stays_quiet_when_the_brake_is_carried_in():
+    assert detect_no_trail(_braking_corner(brake_at_apex=90)) == []
+
+
+def test_no_trail_ignores_corners_without_real_braking():
+    pkts = [
+        make_packet(recv_time=i / 60, speed_kmh=150.0, brake=0, accel_lat=1.0 * 9.80665)
+        for i in range(60)
+    ]
+    assert detect_no_trail(CornerTrace(packets=pkts)) == []
+
+
+def test_no_trail_ignores_a_momentary_release_at_the_apex():
+    assert detect_no_trail(_braking_corner(brake_at_apex=0, coast_frames=8)) == []

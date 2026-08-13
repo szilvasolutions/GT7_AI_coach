@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gt7coach"
-version = "0.1.13"
+version = "0.1.14"
 description = "Open-source real-time AI driving coach for Gran Turismo 7."
 readme = "README.md"
 license = { text = "Apache-2.0" }

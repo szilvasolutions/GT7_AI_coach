@@ -121,6 +121,7 @@ _DEFAULT_ENABLED = {
     "steering.oversteer",
     "line.late_apex",
     "braking.trail_off_too_fast",
+    "braking.no_trail",
 }
 # VR voice-HUD alerts are toggled via cfg.vr_alerts.*_enabled, not via
 # detectors_enabled — the VRAlertDetector handles all sub-alerts internally.

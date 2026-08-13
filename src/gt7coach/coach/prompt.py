@@ -168,6 +168,11 @@ CORRECTION_DIRECTION: dict[str, tuple[str, str]] = {
         "use LESS brake pressure and release it sooner — the front tyres are already sliding",
         "never tell them to brake later, deeper or harder",
     ),
+    "braking.no_trail": (
+        "keep a little brake pressure on all the way to the apex instead of "
+        "finishing the braking in a straight line",
+        "never tell them to finish braking earlier or brake only in a straight line",
+    ),
     "braking.trail_off_too_fast": (
         "release the brake more gradually so the front stays loaded",
         "never tell them to release the brake faster or snap off it",
