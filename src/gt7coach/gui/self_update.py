@@ -76,6 +76,14 @@ def fetch_sha256sums(release_tag: str, timeout_s: float = 5.0) -> dict[str, str]
     return out
 
 
+# Everything driving an in-flight download is held here for the duration.
+# Without this the worker is owned only by a local in run_update_flow: that
+# function returns the moment the thread starts, Python drops the last
+# reference, and the C++ object is destroyed before it can emit anything. The
+# dialog then sits at 0% forever — no progress, no finish, no error.
+_ACTIVE_TRANSFERS: set[_Transfer] = set()
+
+
 class _DownloadWorker(QObject):
     progress = Signal(int, int)  # bytes_read, total
     finished = Signal(Path)  # final staged path
@@ -85,6 +93,12 @@ class _DownloadWorker(QObject):
         super().__init__()
         self._url = url
         self._dest = dest
+        self._aborted = False
+
+    def abort(self) -> None:
+        """Ask the read loop to stop. Cancel previously did nothing at all —
+        it hid the dialog and left the download running."""
+        self._aborted = True
 
     def run(self) -> None:
         try:
@@ -96,6 +110,9 @@ class _DownloadWorker(QObject):
                 read = 0
                 with self._dest.open("wb") as f:
                     while True:
+                        if self._aborted:
+                            log.info("update download cancelled by the user")
+                            return
                         chunk = resp.read(65536)
                         if not chunk:
                             break
@@ -106,6 +123,74 @@ class _DownloadWorker(QObject):
         except Exception as exc:  # pragma: no cover — network paths
             log.warning("download failed: %s", exc)
             self.failed.emit(str(exc))
+
+
+class _Transfer(QObject):
+    """Owns one in-flight download and updates the UI for it.
+
+    A QObject created on the GUI thread, so Qt's automatic connection type
+    sees a worker-thread sender and a GUI-thread receiver and queues the
+    calls. The previous version connected the worker's signals to plain
+    closures, which have no thread affinity — Qt therefore invoked them
+    directly on the worker thread, touching QProgressDialog from outside the
+    GUI thread. That is undefined behaviour: a segfault under X11 and, on
+    Windows, a dialog frozen at 0% that never advances or closes.
+    """
+
+    def __init__(
+        self,
+        parent: QWidget,
+        info: UpdateInfo,
+        thread: QThread,
+        worker: _DownloadWorker,
+        dialog: QProgressDialog,
+    ) -> None:
+        super().__init__(parent)
+        self._parent = parent
+        self._info = info
+        self.thread = thread
+        self.worker = worker
+        self.dialog = dialog
+        _ACTIVE_TRANSFERS.add(self)
+
+    def on_progress(self, read: int, total: int) -> None:
+        if total > 0:
+            self.dialog.setMaximum(total)
+            self.dialog.setValue(read)
+            self.dialog.setLabelText(
+                f"Downloading update… {read / (1024 * 1024):.1f} / {total / (1024 * 1024):.1f} MB"
+            )
+        else:
+            self.dialog.setLabelText(f"Downloading update… {read / 1024:.0f} KB")
+
+    def on_finished(self, path: Path) -> None:
+        self.release()
+        _verify_and_spawn(self._parent, self._info, path)
+
+    def on_failed(self, msg: str) -> None:
+        self.release()
+        QMessageBox.critical(
+            self._parent,
+            "Download failed",
+            f"{msg}\n\nYou can download the new version by hand from the release page instead.",
+        )
+
+    def on_cancelled(self) -> None:
+        # Cancel was never connected at all: it hid the dialog and left the
+        # download running with nothing left to close it.
+        self.worker.abort()
+        self.release()
+
+    def release(self) -> None:
+        self.dialog.close()
+        self.thread.quit()
+        self.thread.wait(3000)
+        _ACTIVE_TRANSFERS.discard(self)
+
+
+def update_in_progress() -> bool:
+    """True while a download is running — a second click must not start another."""
+    return bool(_ACTIVE_TRANSFERS)
 
 
 def run_update_flow(parent: QWidget, info: UpdateInfo) -> None:
@@ -130,6 +215,10 @@ def run_update_flow(parent: QWidget, info: UpdateInfo) -> None:
         )
         return
 
+    if update_in_progress():
+        QMessageBox.information(parent, "Update in progress", "The update is already downloading.")
+        return
+
     zip_name = Path(info.zip_url).name
     dest = _staging_path(zip_name)
 
@@ -145,31 +234,12 @@ def run_update_flow(parent: QWidget, info: UpdateInfo) -> None:
     worker.moveToThread(thread)
     thread.started.connect(worker.run)
 
-    def _on_progress(read: int, total: int) -> None:
-        if total > 0:
-            progress.setMaximum(total)
-            progress.setValue(read)
-            mb_read = read / (1024 * 1024)
-            mb_total = total / (1024 * 1024)
-            progress.setLabelText(f"Downloading update… {mb_read:.1f} / {mb_total:.1f} MB")
-        else:
-            progress.setLabelText(f"Downloading update… {read / 1024:.0f} KB")
-
-    def _on_finished(path: Path) -> None:
-        progress.close()
-        thread.quit()
-        _verify_and_spawn(parent, info, path)
-
-    def _on_failed(msg: str) -> None:
-        progress.close()
-        thread.quit()
-        QMessageBox.critical(parent, "Download failed", msg)
-
-    worker.progress.connect(_on_progress)
-    worker.finished.connect(_on_finished)
-    worker.failed.connect(_on_failed)
+    transfer = _Transfer(parent, info, thread, worker, progress)
+    worker.progress.connect(transfer.on_progress)
+    worker.finished.connect(transfer.on_finished)
+    worker.failed.connect(transfer.on_failed)
+    progress.canceled.connect(transfer.on_cancelled)
     thread.finished.connect(worker.deleteLater)
-    thread.finished.connect(thread.deleteLater)
     thread.start()
 
 
