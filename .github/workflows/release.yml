@@ -52,10 +52,15 @@ jobs:
             $isRelease = $false
           }
           $version = $tag.TrimStart("v")
+          # Nuitka's --file-version / --product-version must be numeric (X.Y.Z.W).
+          # Test tags like "vdev-nuitka" are not, so derive a numeric fallback.
+          $mm = [regex]::Match($version, '^[0-9]+\.[0-9]+\.[0-9]+')
+          $numver = if ($mm.Success) { $mm.Value } else { "0.0.0" }
           "tag=$tag"           | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           "version=$version"   | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "numver=$numver"     | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           "is_release=$($isRelease.ToString().ToLower())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          Write-Host "tag=$tag version=$version is_release=$isRelease"
+          Write-Host "tag=$tag version=$version numver=$numver is_release=$isRelease"
 
       - name: Install build dependencies
         shell: pwsh
@@ -67,28 +72,34 @@ jobs:
       - name: Build GT7Coach.exe (Nuitka standalone)
         shell: pwsh
         run: |
-          python -m nuitka --standalone --assume-yes-for-downloads `
-            --enable-plugin=pyside6 `
-            --windows-console-mode=disable `
-            --company-name="Szilva Solutions" `
-            --product-name="GT7 AI Coach" `
-            --file-version=${{ steps.vars.outputs.version }}.0 `
-            --product-version=${{ steps.vars.outputs.version }}.0 `
-            --include-package-data=gt7coach `
-            --include-data-dir=src/gt7coach/tracks/data=gt7coach/tracks/data `
-            --include-data-dir=src/gt7coach/gui/assets=gt7coach/gui/assets `
-            --include-data-files=config.example.yaml=config.example.yaml `
-            --include-package=pyttsx3 `
-            --include-module=pyttsx3.drivers.sapi5 `
-            --include-package=comtypes `
-            --include-package=anthropic `
-            --include-package=openai `
-            --include-package=google.genai `
-            --include-package=google.api_core `
-            --include-package=google.auth `
-            --output-filename=GT7Coach.exe `
-            --output-dir=build-nuitka `
-            src/gt7coach/gui/app.py
+          # Only include optional packages that are actually importable. Nuitka
+          # hard-fails on a missing --include-package, and comtypes (pyttsx3's
+          # SAPI5 backend) / google.api_core may not be installed. --include-package
+          # on pyttsx3 already pulls its drivers.sapi5 submodule. Crypto
+          # (pycryptodome) loads cipher backends dynamically, so force it in.
+          $optional = @('pyttsx3','comtypes','anthropic','openai','google.genai','google.auth','google.api_core','Crypto')
+          $inc = @()
+          foreach ($p in $optional) {
+            python -c "import importlib; importlib.import_module('$p')" 2>$null
+            if ($LASTEXITCODE -eq 0) { $inc += "--include-package=$p" }
+            else { Write-Host "note: optional package not importable, skipping include: $p" }
+          }
+          $nk = @(
+            '--standalone','--assume-yes-for-downloads',
+            '--enable-plugin=pyside6','--windows-console-mode=disable',
+            '--company-name=Szilva Solutions','--product-name=GT7 AI Coach',
+            '--file-version=${{ steps.vars.outputs.numver }}.0',
+            '--product-version=${{ steps.vars.outputs.numver }}.0',
+            '--include-package-data=gt7coach',
+            '--include-data-dir=src/gt7coach/tracks/data=gt7coach/tracks/data',
+            '--include-data-dir=src/gt7coach/gui/assets=gt7coach/gui/assets',
+            '--include-data-files=config.example.yaml=config.example.yaml'
+          ) + $inc + @(
+            '--output-filename=GT7Coach.exe','--output-dir=build-nuitka',
+            'src/gt7coach/gui/app.py'
+          )
+          Write-Host "nuitka args: $($nk -join ' ')"
+          python -m nuitka @nk
           if (-not (Test-Path build-nuitka/app.dist/GT7Coach.exe)) {
             throw "Nuitka did not produce GT7Coach.exe"
           }
