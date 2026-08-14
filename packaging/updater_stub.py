@@ -24,6 +24,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import zipfile
 from pathlib import Path
@@ -78,6 +79,77 @@ def sha256_of(path: Path) -> str:
     return h.hexdigest()
 
 
+def relocate_self_to_temp() -> Path | None:
+    """Copy this updater out of the install directory and re-exec from there.
+
+    Windows will not rename or move a directory that contains a running
+    executable, and updater.exe ships *inside* the install folder it is meant
+    to replace. The rename therefore failed with a sharing violation every
+    time, the updater exited quietly, and the app simply never updated.
+
+    Returns the temp path if a re-exec was launched (caller should exit), or
+    None if relocation is unnecessary or impossible.
+    """
+    if sys.platform != "win32" or not getattr(sys, "frozen", False):
+        return None
+    me = Path(sys.executable).resolve()
+    if os.environ.get("GT7COACH_UPDATER_RELOCATED") == "1":
+        return None  # already running from the copy
+
+    tmp_dir = Path(tempfile.mkdtemp(prefix="gt7coach-updater-"))
+    copy = tmp_dir / me.name
+    try:
+        shutil.copy2(me, copy)
+    except OSError as exc:
+        log.warning("could not copy updater to %s: %s", copy, exc)
+        return None
+
+    env = dict(os.environ, GT7COACH_UPDATER_RELOCATED="1")
+    log.info("re-executing from %s so the install folder can be replaced", copy)
+    subprocess.Popen(
+        [str(copy), *sys.argv[1:]],
+        env=env,
+        creationflags=0x00000010,  # CREATE_NEW_CONSOLE — keep errors visible
+        close_fds=True,
+    )
+    return copy
+
+
+def _extract_root(zf: zipfile.ZipFile) -> str:
+    """Return the single top-level folder in the zip, or '' if there isn't one.
+
+    The release zip wraps everything in ``GT7Coach/``. Extracting it straight
+    into the install directory produced ``<install>/GT7Coach/GT7Coach.exe`` —
+    nested one level too deep — so the contents must be lifted out of it.
+    """
+    tops = {n.split("/")[0] for n in zf.namelist() if n.strip()}
+    if len(tops) != 1:
+        return ""
+    only = tops.pop()
+    return only if any(n.startswith(only + "/") for n in zf.namelist()) else ""
+
+
+def _extract_stripping_root(zf: zipfile.ZipFile, dest: Path) -> None:
+    root = _extract_root(zf)
+    if not root:
+        zf.extractall(dest)
+        return
+    prefix = root + "/"
+    for member in zf.infolist():
+        if not member.filename.startswith(prefix):
+            continue
+        rel = member.filename[len(prefix) :]
+        if not rel:
+            continue
+        target = dest / rel
+        if member.is_dir():
+            target.mkdir(parents=True, exist_ok=True)
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with zf.open(member) as src, target.open("wb") as out:
+            shutil.copyfileobj(src, out)
+
+
 def swap_install(
     zip_path: Path,
     install_dir: Path,
@@ -109,7 +181,7 @@ def swap_install(
         install_dir.mkdir(parents=True, exist_ok=False)
         log.info("extracting %s -> %s", zip_path, install_dir)
         with zipfile.ZipFile(zip_path, "r") as zf:
-            zf.extractall(install_dir)
+            _extract_stripping_root(zf, install_dir)
     except Exception:
         log.exception("extract failed; rolling back from %s", backup)
         # Best-effort rollback. Remove the half-extracted dir, restore backup.
@@ -165,11 +237,27 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = p.parse_args(argv)
 
+    # Log to a file as well as the console. The GUI spawns this detached, so
+    # when the swap failed there was nothing on screen and nothing on disk to
+    # explain why -- the update simply never happened.
+    handlers: list[logging.Handler] = [logging.StreamHandler(sys.stderr)]
+    log_path = Path(tempfile.gettempdir()) / "gt7coach-updater.log"
+    try:
+        handlers.append(logging.FileHandler(log_path, mode="a", encoding="utf-8"))
+    except OSError:
+        pass
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-        stream=sys.stderr,
+        handlers=handlers,
+        force=True,
     )
+    log.info("updater log: %s", log_path)
+
+    # Get out of the directory we are about to replace before touching it.
+    if relocate_self_to_temp() is not None:
+        log.info("handed over to the relocated copy; exiting")
+        return 0
 
     log.info("updater starting (pid=%d, zip=%s, install=%s)", args.pid, args.zip, args.install_dir)
     if not wait_for_pid_exit(args.pid, timeout_s=args.wait_timeout):
@@ -180,7 +268,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         new_install = swap_install(args.zip, args.install_dir, args.sha256)
     except Exception as exc:
-        log.error("update failed: %s", exc)
+        log.exception("update failed: %s", exc)
         return 2
 
     if not args.no_restart:

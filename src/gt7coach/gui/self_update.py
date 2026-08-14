@@ -296,8 +296,13 @@ def _verify_and_spawn(parent: QWidget, info: UpdateInfo, zip_path: Path) -> None
     try:
         kwargs: dict = {"close_fds": True}
         if sys.platform == "win32":
-            DETACHED_PROCESS = 0x00000008
-            kwargs["creationflags"] = DETACHED_PROCESS
+            # CREATE_NEW_CONSOLE, not DETACHED_PROCESS. The updater is built
+            # with console=True so it can show progress and errors, but
+            # DETACHED_PROCESS gives it no console at all — so when the swap
+            # failed there was nothing on screen and the update just silently
+            # did not happen.
+            CREATE_NEW_CONSOLE = 0x00000010
+            kwargs["creationflags"] = CREATE_NEW_CONSOLE
         subprocess.Popen(args, **kwargs)
     except Exception as exc:
         QMessageBox.critical(parent, "Could not start updater", str(exc))
@@ -307,9 +312,10 @@ def _verify_and_spawn(parent: QWidget, info: UpdateInfo, zip_path: Path) -> None
     QMessageBox.information(
         parent,
         "Updating",
-        "The updater is running in the background.\n"
-        "GT7 AI Coach will close now and relaunch automatically once "
-        "the new version is installed.",
+        "GT7 AI Coach will close now. A small updater window will swap in "
+        "the new version and start it again.\n\n"
+        "If nothing reopens within a minute, the updater log is at\n"
+        "%TEMP%\\gt7coach-updater.log",
     )
     # Close the application window. Qt will fire MainWindow.closeEvent
     # which already stops the runner and tail.

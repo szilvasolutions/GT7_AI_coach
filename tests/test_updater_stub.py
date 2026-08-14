@@ -77,7 +77,8 @@ def test_swap_install_replaces_contents(stub, tmp_path: Path) -> None:
 
     assert new_install == install
     # The new exe should be in place.
-    new_exe = install / "GT7Coach" / "GT7Coach.exe"
+    # The wrapper folder is stripped: the exe lands at the install root.
+    new_exe = install / "GT7Coach.exe"
     assert new_exe.is_file()
     assert new_exe.read_bytes() == b"new-fake-exe"
     # Backup should exist alongside, with the old contents.
@@ -179,4 +180,71 @@ def test_main_end_to_end(stub, tmp_path: Path, monkeypatch) -> None:
         ]
     )
     assert rc == 0
-    assert (install / "GT7Coach" / "GT7Coach.exe").read_bytes() == b"new-fake-exe"
+    assert (install / "GT7Coach.exe").read_bytes() == b"new-fake-exe"
+
+
+# --- the release zip wraps everything in GT7Coach/ --------------------------
+
+
+def test_extraction_strips_the_wrapper_folder(tmp_path):
+    """The zip is GT7Coach/GT7Coach.exe, and install_dir IS the GT7Coach
+    folder — extracting straight in produced <install>/GT7Coach/GT7Coach.exe,
+    nested one level too deep."""
+    import zipfile
+
+    from updater_stub import _extract_root, _extract_stripping_root
+
+    src = tmp_path / "rel.zip"
+    with zipfile.ZipFile(src, "w") as zf:
+        zf.writestr("GT7Coach/GT7Coach.exe", "exe")
+        zf.writestr("GT7Coach/updater.exe", "upd")
+        zf.writestr("GT7Coach/_internal/base_library.zip", "lib")
+
+    with zipfile.ZipFile(src) as zf:
+        assert _extract_root(zf) == "GT7Coach"
+        dest = tmp_path / "install"
+        dest.mkdir()
+        _extract_stripping_root(zf, dest)
+
+    assert (dest / "GT7Coach.exe").is_file(), "exe must land at the install root"
+    assert (dest / "_internal" / "base_library.zip").is_file()
+    assert not (dest / "GT7Coach").exists(), "the wrapper folder must not survive"
+
+
+def test_extraction_leaves_a_flat_zip_alone(tmp_path):
+    import zipfile
+
+    from updater_stub import _extract_root, _extract_stripping_root
+
+    src = tmp_path / "flat.zip"
+    with zipfile.ZipFile(src, "w") as zf:
+        zf.writestr("GT7Coach.exe", "exe")
+        zf.writestr("README.txt", "hi")
+
+    with zipfile.ZipFile(src) as zf:
+        assert _extract_root(zf) == ""
+        dest = tmp_path / "install2"
+        dest.mkdir()
+        _extract_stripping_root(zf, dest)
+    assert (dest / "GT7Coach.exe").is_file()
+
+
+def test_swap_install_produces_a_runnable_layout(tmp_path):
+    """End to end: the swap must leave GT7Coach.exe directly in the install
+    dir, which is what relaunch() looks for first."""
+    import zipfile
+
+    from updater_stub import swap_install
+
+    install = tmp_path / "GT7Coach"
+    install.mkdir()
+    (install / "GT7Coach.exe").write_text("old")
+    zip_path = tmp_path / "new.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("GT7Coach/GT7Coach.exe", "new")
+        zf.writestr("GT7Coach/_internal/x", "y")
+
+    swap_install(zip_path, install)
+    assert (install / "GT7Coach.exe").read_text() == "new"
+    assert (install / "_internal" / "x").is_file()
+    assert list(tmp_path.glob("GT7Coach.bak.*")), "the old install must be kept as a backup"
