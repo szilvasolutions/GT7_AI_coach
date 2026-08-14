@@ -170,3 +170,25 @@ def test_help_badge_shows_its_text_on_click(qapp, tmp_path):
     qapp.processEvents()
     assert QToolTip.text() == "<b>PS5 IP</b><br>leave it on auto"
     QToolTip.hideText()
+
+
+def test_saving_exposes_the_car_class_for_the_toolbar(qapp, tmp_path):
+    """Car class lived in two stores that could disagree: the toolbar
+    (QSettings, and the value actually passed to the coach) and this dialog
+    (config.yaml). Typing it here did nothing whenever the toolbar was set."""
+    path = tmp_path / "config.yaml"
+    dlg = ConfigDialog(path=path)
+    assert dlg.saved_car_class is None, "nothing saved yet"
+    dlg._car_class.setText("Gr.3 RWD")
+    dlg._save_and_close()
+    assert dlg.saved_car_class == "Gr.3 RWD", "the main window needs this to sync the toolbar"
+
+
+def test_a_failed_save_exposes_nothing(qapp, tmp_path):
+    """If Save is refused, the toolbar must not be updated from it."""
+    foreign = tmp_path / "config.yaml"
+    foreign.write_text("services:\n  web:\n    image: nginx\n", encoding="utf-8")
+    dlg = ConfigDialog(path=foreign)
+    dlg._car_class.setText("Gr.4")
+    dlg._save_and_close()  # refuses: not our config file
+    assert dlg.saved_car_class is None

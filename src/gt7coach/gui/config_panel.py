@@ -256,6 +256,9 @@ class ConfigDialog(QDialog):
         self.setModal(True)
         self.resize(560, 680)
         self._path = path or Path.cwd() / "config.yaml"
+        # Set on a successful save so the main window can mirror it into the
+        # toolbar, which is what actually reaches the coach.
+        self.saved_car_class: str | None = None
         self._env_path = self._path.with_name(".env")
 
         try:
@@ -496,6 +499,9 @@ class ConfigDialog(QDialog):
 
         try:
             save(cfg, self._path)
+            # Only after the write succeeds — a refused save must not push a
+            # value into the toolbar.
+            self.saved_car_class = cfg.coach_car_class
         except Exception as exc:
             QMessageBox.critical(self, "Save failed", f"Could not write {self._path}:\n{exc}")
             return

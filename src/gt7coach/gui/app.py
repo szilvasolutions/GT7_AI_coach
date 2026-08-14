@@ -274,7 +274,20 @@ class MainWindow(QMainWindow):
         self._style_combo.setCurrentText(
             str(self._settings.value("options/driver_style", self._style_combo.currentText()))
         )
-        self._car_class_edit.setText(str(self._settings.value("options/car_class", "")))
+        saved_car_class = str(self._settings.value("options/car_class", ""))
+        if not saved_car_class:
+            # First run after configuring: adopt whatever config.yaml holds
+            # rather than starting blank and silently ignoring it.
+            try:
+                from gt7coach.config import load as _load_cfg
+                from gt7coach.config import looks_like_gt7_config
+
+                cfg_path = Path.cwd() / "config.yaml"
+                if cfg_path.is_file() and looks_like_gt7_config(cfg_path):
+                    saved_car_class = _load_cfg(cfg_path).coach_car_class
+            except Exception:  # pragma: no cover - config is best-effort here
+                saved_car_class = ""
+        self._car_class_edit.setText(saved_car_class)
 
     def _save_settings(self) -> None:
         self._settings.setValue("window/geometry", self.saveGeometry())
@@ -465,7 +478,13 @@ class MainWindow(QMainWindow):
 
     def _open_config_dialog(self) -> None:
         dlg = ConfigDialog(self)
-        dlg.exec()
+        if dlg.exec() and dlg.saved_car_class is not None:
+            # Car class lived in two places that could disagree: the toolbar
+            # (QSettings, and the value actually passed to the coach) and this
+            # dialog (config.yaml). Typing it here and saving therefore did
+            # nothing whenever the toolbar already had a value. Push the saved
+            # value into the toolbar so there is one answer.
+            self._car_class_edit.setText(dlg.saved_car_class)
 
     # ---- update button -----------------------------------------------------
 
