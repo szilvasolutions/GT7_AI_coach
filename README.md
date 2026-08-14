@@ -4,9 +4,9 @@
 
 **A real-time AI driving coach that talks to you while you drive Gran Turismo 7.**
 
-### [![Download GT7Coach.exe](https://img.shields.io/badge/⬇%20DOWNLOAD-GT7Coach.exe-2ea043?style=for-the-badge&logo=windows&logoColor=white&labelColor=1f6feb)](https://github.com/szilvasolutions/GT7_AI_coach/releases/latest/download/GT7Coach.exe)
+### [![Download the installer](https://img.shields.io/badge/⬇%20DOWNLOAD-GT7Coach%20installer-2ea043?style=for-the-badge&logo=windows&logoColor=white&labelColor=1f6feb)](https://github.com/szilvasolutions/GT7_AI_coach/releases/latest/download/GT7Coach-Setup.exe)
 
-**One file. Double-click it. That is the entire install.**
+**Download it. Run it. Click Next → Install. Done.**
 
 No Python, no unzipping, nothing to set up first.
 
@@ -22,9 +22,9 @@ ready-to-run build.
 **First launch:** Windows shows *"unknown publisher"* → click **More info** →
 **Run anyway**. The window takes ~10 seconds to appear the first time.
 
-**Want it to start instantly?** Grab `GT7Coach-vX.Y.Z-win64.zip` from the
-[releases page](https://github.com/szilvasolutions/GT7_AI_coach/releases/latest)
-instead — same app in a folder, opens immediately, and updates itself.
+**Prefer a portable copy (no installer)?** Grab `GT7Coach-vX.Y.Z-win64.zip`
+from the [releases page](https://github.com/szilvasolutions/GT7_AI_coach/releases/latest)
+instead — the same app in a folder you can unzip anywhere.
 
 </td></tr>
 </table>
@@ -93,20 +93,19 @@ replay path; live UDP needs the PS5 to be reachable on the LAN.
 
 ## Download (Windows binary)
 
-Two builds of the same app, both on the
+Two ways to get the same app, both on the
 [latest release page](https://github.com/szilvasolutions/GT7_AI_coach/releases/latest).
 No Python, no git, no command line either way.
 
-**`GT7Coach.exe`** — one file, nothing beside it. Put it in its own
-folder (it writes `config.yaml`, `.env` and `sessions/` next to itself)
-and double-click. Every launch unpacks the app to `%TEMP%` first, so the
-window takes ~10 s to appear and **Start** pays that again.
+**`GT7Coach-Setup.exe`** — the installer wizard (recommended). Double-click,
+click **Next → Install**, and it sets up GT7 AI Coach for your user account
+(no admin needed), with Start-menu and desktop shortcuts and a proper
+uninstaller. This is the easy one.
 
-**`GT7Coach-vX.Y.Z-win64.zip`** — the same app as a folder. Unzip
-somewhere with write access (e.g. `C:\GT7Coach\`, **not** `Program
-Files` — the in-app updater writes into its own folder), then run
-`GT7Coach.exe` inside. Starts instantly and can update itself. This is
-the one to use if you run the coach regularly.
+**`GT7Coach-vX.Y.Z-win64.zip`** — the same app as a portable folder. Unzip
+somewhere with write access (e.g. `C:\GT7Coach\`, **not** `Program Files` —
+the in-app updater writes into its own folder), then run `GT7Coach.exe`
+inside. Use this if you'd rather not run an installer.
 
 Either way: on first launch use **Tools → Configure** to pick a provider
 and paste your API key, then hit **Start**.
