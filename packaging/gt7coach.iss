@@ -34,8 +34,10 @@ DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 DisableDirPage=auto
 ; Per-user install -> no admin/UAC prompt.
+; Always per-user. Offering the admin choice would let someone install into
+; Program Files, where the app cannot write config.yaml, .env or sessions\ and
+; where the in-app updater cannot replace its own folder.
 PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=..\dist\installer

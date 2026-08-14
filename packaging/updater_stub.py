@@ -190,8 +190,26 @@ def swap_install(
         backup.rename(install_dir)
         raise
 
+    _restore_uninstaller(backup, install_dir)
     log.info("update extracted OK; backup retained at %s", backup)
     return install_dir
+
+
+def _restore_uninstaller(backup: Path, install_dir: Path) -> None:
+    """Carry Inno Setup's uninstaller across the swap.
+
+    The Plan B installer drops unins000.exe / unins000.dat into the install
+    folder and registers that path in Add/Remove Programs. The release zip
+    contains no such files, so replacing the folder wholesale would delete
+    them and leave an uninstall entry pointing at nothing — the app would
+    become un-uninstallable through Windows.
+    """
+    for name in sorted(p.name for p in backup.glob("unins*")):
+        try:
+            shutil.copy2(backup / name, install_dir / name)
+            log.info("preserved installer file %s", name)
+        except OSError as exc:
+            log.warning("could not preserve %s: %s", name, exc)
 
 
 def relaunch(install_dir: Path, exe_name: str = "GT7Coach.exe") -> None:

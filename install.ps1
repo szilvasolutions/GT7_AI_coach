@@ -3,6 +3,10 @@
 # runs it. Prefers the one-click Setup wizard; falls back to the portable zip.
 # Run via DOWNLOAD-THE-APP.bat (which sets ExecutionPolicy for you).
 
+# -UseBasicParsing on every web call: without it PowerShell 5.1 hands the
+# response to the Internet Explorer engine, which throws on any machine where
+# IE's first-run setup never completed. That is most fresh Windows installs,
+# and it silently broke the previous downloader.
 $ErrorActionPreference = 'Stop'
 $ProgressPreference    = 'SilentlyContinue'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -14,7 +18,7 @@ $headers = @{ 'User-Agent' = 'gt7coach-installer' }
 function Get-WantedHash($rel, $name) {
     $sumAsset = $rel.assets | Where-Object { $_.name -eq 'SHA256SUMS.txt' } | Select-Object -First 1
     if (-not $sumAsset) { return $null }
-    $sums = (Invoke-WebRequest $sumAsset.browser_download_url -Headers $headers).Content
+    $sums = (Invoke-WebRequest $sumAsset.browser_download_url -Headers $headers -UseBasicParsing).Content
     $line = ($sums -split "`n") | Where-Object { $_ -match [regex]::Escape($name) } | Select-Object -First 1
     if (-not $line) { return $null }
     return (($line -split '\s+')[0]).TrimStart('*').ToLower()
@@ -23,7 +27,7 @@ function Get-WantedHash($rel, $name) {
 try {
     Write-Host ''
     Write-Host '  Fetching latest release info ...'
-    $rel = Invoke-RestMethod "https://api.github.com/repos/$repo/releases/latest" -Headers $headers
+    $rel = Invoke-RestMethod "https://api.github.com/repos/$repo/releases/latest" -Headers $headers -UseBasicParsing
 
     # Prefer the one-click installer wizard; fall back to the portable zip.
     $setup = $rel.assets | Where-Object { $_.name -like '*Setup*.exe' } | Select-Object -First 1
@@ -34,7 +38,7 @@ try {
     $out = Join-Path $env:TEMP $asset.name
     $mb  = [math]::Round($asset.size / 1MB)
     Write-Host "  Downloading $($asset.name) ($mb MB) ..."
-    Invoke-WebRequest $asset.browser_download_url -OutFile $out -Headers $headers
+    Invoke-WebRequest $asset.browser_download_url -OutFile $out -Headers $headers -UseBasicParsing
 
     $want = Get-WantedHash $rel $asset.name
     if ($want) {

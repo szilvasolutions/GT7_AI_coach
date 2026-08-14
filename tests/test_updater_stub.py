@@ -248,3 +248,46 @@ def test_swap_install_produces_a_runnable_layout(tmp_path):
     assert (install / "GT7Coach.exe").read_text() == "new"
     assert (install / "_internal" / "x").is_file()
     assert list(tmp_path.glob("GT7Coach.bak.*")), "the old install must be kept as a backup"
+
+
+def test_swap_preserves_the_inno_uninstaller(tmp_path):
+    """Inno Setup registers unins000.exe in Add/Remove Programs. The release
+    zip has no such file, so a wholesale folder swap would delete it and leave
+    Windows with an uninstall entry pointing at nothing."""
+    import zipfile
+
+    from updater_stub import swap_install
+
+    install = tmp_path / "GT7Coach"
+    install.mkdir()
+    (install / "GT7Coach.exe").write_text("old")
+    (install / "unins000.exe").write_text("uninstaller")
+    (install / "unins000.dat").write_text("uninstall-data")
+
+    zip_path = tmp_path / "new.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("GT7Coach/GT7Coach.exe", "new")
+
+    swap_install(zip_path, install)
+
+    assert (install / "GT7Coach.exe").read_text() == "new", "the app must be updated"
+    assert (install / "unins000.exe").read_text() == "uninstaller", "uninstaller must survive"
+    assert (install / "unins000.dat").is_file()
+
+
+def test_swap_without_an_uninstaller_is_unaffected(tmp_path):
+    """A portable-zip install has no unins* files; the swap must not care."""
+    import zipfile
+
+    from updater_stub import swap_install
+
+    install = tmp_path / "GT7Coach"
+    install.mkdir()
+    (install / "GT7Coach.exe").write_text("old")
+    zip_path = tmp_path / "new.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("GT7Coach/GT7Coach.exe", "new")
+
+    swap_install(zip_path, install)
+    assert (install / "GT7Coach.exe").read_text() == "new"
+    assert not list(install.glob("unins*"))
