@@ -16,9 +16,8 @@ No Python, no unzipping, nothing to set up first.
 <tr><td>
 
 **⚠️ The green `Code ▸ Download ZIP` button gives you the source code**, not
-the app. If you already downloaded it, double-click **`INSTALL-GT7-COACH.exe`**
-inside — it fetches the app and starts it. (If your antivirus eats it, use
-`INSTALL-alternative.bat` next to it, which does exactly the same thing.)
+the app. Use the download button above instead — it goes straight to the
+ready-to-run build.
 
 **First launch:** Windows shows *"unknown publisher"* → click **More info** →
 **Run anyway**. The window takes ~10 seconds to appear the first time.
