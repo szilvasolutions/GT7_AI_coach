@@ -380,3 +380,49 @@ def test_user_stop_is_not_reported_as_a_crash(qapp, tmp_path, monkeypatch) -> No
 
     assert not failures, f"a requested stop must not raise a failure dialog: {failures}"
     assert exits and exits[-1] == 0, f"expected a clean exit code, got {exits}"
+
+
+def test_frozen_detection_covers_nuitka_not_just_pyinstaller(monkeypatch):
+    """Plan B swaps PyInstaller for Nuitka, and Nuitka sets neither
+    sys.frozen nor sys._MEIPASS — it injects __compiled__ instead. Testing
+    for PyInstaller alone would have made every Start click relaunch the GUI
+    with '-m gt7coach.main', which is exactly how v0.1.0 was broken."""
+    import gt7coach.runtime as rt
+
+    monkeypatch.delattr(sys, "frozen", raising=False)
+    monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+    assert rt.is_frozen() is False
+    assert rt.packager() == "source"
+
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    assert rt.is_frozen() is True
+    assert rt.packager() == "pyinstaller"
+
+    # Nuitka's marker lives in the module globals, not on sys.
+    monkeypatch.delattr(sys, "frozen", raising=False)
+    monkeypatch.setitem(rt.__dict__, "__compiled__", object())
+    assert rt.is_frozen() is True, "a Nuitka build must count as frozen"
+    assert rt.packager() == "nuitka"
+
+
+def test_a_nuitka_build_passes_run_coach_not_dash_m(qapp, monkeypatch, tmp_path):
+    """The regression this guards: under Nuitka the runner must still use
+    --run-coach, or the GUI relaunches itself and dies on its own argparse."""
+    import gt7coach.runtime as rt
+
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
+    monkeypatch.delattr(sys, "frozen", raising=False)
+    monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+    monkeypatch.setitem(rt.__dict__, "__compiled__", object())
+
+    r = CoachRunner()
+    r.start(CoachOptions(voice="null"))
+    try:
+        assert r._proc is not None
+        args = list(r._proc.arguments())
+        assert args[0] == "--run-coach", f"Nuitka build must dispatch in-process, got {args[:2]}"
+        assert "-m" not in args
+    finally:
+        if r._proc is not None:
+            r._proc.kill()
+            r._proc.waitForFinished(2000)

@@ -143,8 +143,11 @@ class CoachRunner(QObject):
 
         self._proc = QProcess(self)
         self._proc.setProgram(sys.executable)
-        if getattr(sys, "frozen", False):
-            # PyInstaller bundle: sys.executable is GT7Coach.exe itself and
+        from gt7coach.runtime import is_frozen
+
+        if is_frozen():
+            # Packaged build (PyInstaller or Nuitka): sys.executable is
+            # GT7Coach.exe itself and
             # there is no -m machinery. gui/app.py:main() recognises
             # --run-coach and dispatches to gt7coach.main before any GUI
             # setup.

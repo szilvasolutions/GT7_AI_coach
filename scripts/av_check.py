@@ -55,7 +55,10 @@ def main() -> int:
         print("not seen before — uploading (large files may take a minute) ...")
         with open(path, "rb") as fh:
             up = requests.post(
-                f"{API}/files", headers=headers, files={"file": (os.path.basename(path), fh)}, timeout=600
+                f"{API}/files",
+                headers=headers,
+                files={"file": (os.path.basename(path), fh)},
+                timeout=600,
             )
         up.raise_for_status()
         analysis_id = up.json()["data"]["id"]

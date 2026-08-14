@@ -81,7 +81,9 @@ def is_frozen_bundle() -> bool:
     Used to decide whether the 'Download & install' button is enabled
     (Phase D wires the self-updater for bundle installs only).
     """
-    return getattr(sys, "frozen", False) or hasattr(sys, "_MEIPASS")
+    from gt7coach.runtime import is_frozen
+
+    return is_frozen()
 
 
 def can_self_update() -> bool:
@@ -97,7 +99,9 @@ def can_self_update() -> bool:
     """
     if not is_frozen_bundle():
         return False
-    return (Path(sys.executable).parent / "updater.exe").is_file()
+    from gt7coach.runtime import app_dir
+
+    return (app_dir() / "updater.exe").is_file()
 
 
 def _parse_version(s: str) -> tuple[int, ...]:

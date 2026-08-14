@@ -43,8 +43,10 @@ def _staging_path(filename: str) -> Path:
 def install_dir() -> Path:
     """Best-guess for the current install directory (the folder
     containing ``GT7Coach.exe`` / the frozen interpreter)."""
-    if getattr(sys, "frozen", False):
-        return Path(sys.executable).parent
+    from gt7coach.runtime import app_dir, is_frozen
+
+    if is_frozen():
+        return app_dir()
     # In dev (pip install -e .) we shouldn't be calling self-update at all.
     return Path.cwd()
 
