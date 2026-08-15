@@ -15,6 +15,17 @@ echo   No Python, no setup. Takes about a minute.
 echo.
 pause
 
+rem Double-clicking this file from inside the zip (without extracting)
+rem lands it alone in a temp folder, so install.ps1 is not beside it.
+if not exist "%~dp0install.ps1" (
+    echo.
+    echo   Please EXTRACT the zip first, then run this file from the
+    echo   extracted folder.
+    echo.
+    pause
+    exit /b 1
+)
+
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0install.ps1"
 set "rc=%errorlevel%"
 

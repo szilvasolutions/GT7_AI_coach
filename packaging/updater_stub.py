@@ -90,7 +90,15 @@ def relocate_self_to_temp() -> Path | None:
     Returns the temp path if a re-exec was launched (caller should exit), or
     None if relocation is unnecessary or impossible.
     """
-    if sys.platform != "win32" or not getattr(sys, "frozen", False):
+    # Nuitka deliberately does NOT set sys.frozen (its docs say the flag
+    # "triggers inferior code for no reason") — it injects __compiled__
+    # instead. release.yml builds this stub with `nuitka --onefile`, so the
+    # old sys.frozen-only test was False on every shipped build and the
+    # relocation below never happened. The rename then hit WinError 32 on
+    # updater.exe itself, which is precisely the bug this function exists to
+    # prevent. Keep both tests: PyInstaller sets frozen, Nuitka sets the other.
+    frozen = getattr(sys, "frozen", False) or "__compiled__" in globals()
+    if sys.platform != "win32" or not frozen:
         return None
     me = Path(sys.executable).resolve()
     if os.environ.get("GT7COACH_UPDATER_RELOCATED") == "1":
@@ -122,27 +130,51 @@ def _extract_root(zf: zipfile.ZipFile) -> str:
     into the install directory produced ``<install>/GT7Coach/GT7Coach.exe`` —
     nested one level too deep — so the contents must be lifted out of it.
     """
-    tops = {n.split("/")[0] for n in zf.namelist() if n.strip()}
+    # The zip is built by PowerShell Compress-Archive. The spec says entries
+    # use forward slashes, but tolerate backslashes rather than betting the
+    # update path on it: if the separator were ever "\", every name would look
+    # top-level, `tops` would have many members, and we would silently go back
+    # to extracting <install>/GT7Coach/GT7Coach.exe.
+    names = [_norm(n) for n in zf.namelist() if n.strip()]
+    tops = {n.split("/")[0] for n in names}
     if len(tops) != 1:
         return ""
     only = tops.pop()
-    return only if any(n.startswith(only + "/") for n in zf.namelist()) else ""
+    return only if any(n.startswith(only + "/") for n in names) else ""
+
+
+def _norm(name: str) -> str:
+    return name.replace("\\", "/")
+
+
+def _safe_target(dest: Path, rel: str) -> Path:
+    """Resolve ``rel`` under ``dest``, refusing to escape it.
+
+    zipfile.extractall sanitises member names; this hand-rolled loop did not,
+    so an entry called ``../../evil.exe`` would have been written outside the
+    install directory.
+    """
+    target = (dest / rel).resolve()
+    if target != dest.resolve() and dest.resolve() not in target.parents:
+        raise ValueError(f"refusing to extract outside the install dir: {rel}")
+    return target
 
 
 def _extract_stripping_root(zf: zipfile.ZipFile, dest: Path) -> None:
     root = _extract_root(zf)
-    if not root:
-        zf.extractall(dest)
-        return
-    prefix = root + "/"
+    prefix = root + "/" if root else ""
     for member in zf.infolist():
-        if not member.filename.startswith(prefix):
-            continue
-        rel = member.filename[len(prefix) :]
+        name = _norm(member.filename)
+        if prefix:
+            if not name.startswith(prefix):
+                continue
+            rel = name[len(prefix) :]
+        else:
+            rel = name
         if not rel:
             continue
-        target = dest / rel
-        if member.is_dir():
+        target = _safe_target(dest, rel)
+        if member.is_dir() or rel.endswith("/"):
             target.mkdir(parents=True, exist_ok=True)
             continue
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -174,25 +206,93 @@ def swap_install(
 
     ts = time.strftime("%Y%m%d_%H%M%S")
     backup = install_dir.with_name(install_dir.name + f".bak.{ts}")
-    log.info("renaming current install %s -> %s", install_dir, backup)
-    install_dir.rename(backup)
+    staged = install_dir.with_name(install_dir.name + f".new.{ts}")
 
+    # Build the replacement BEFORE touching the working install. The previous
+    # order renamed the install away and only then opened the zip, so a
+    # truncated download, a bad archive or a full disk destroyed a working
+    # installation and left the user depending on a rollback path that can
+    # itself fail. Nothing below this point can lose the old install until a
+    # complete new one exists on disk.
+    if staged.exists():
+        shutil.rmtree(staged, ignore_errors=True)
     try:
-        install_dir.mkdir(parents=True, exist_ok=False)
-        log.info("extracting %s -> %s", zip_path, install_dir)
         with zipfile.ZipFile(zip_path, "r") as zf:
-            _extract_stripping_root(zf, install_dir)
+            bad = zf.testzip()
+            if bad is not None:
+                raise zipfile.BadZipFile(f"corrupt entry in archive: {bad}")
+            log.info("extracting %s -> %s", zip_path, staged)
+            staged.mkdir(parents=True, exist_ok=False)
+            _extract_stripping_root(zf, staged)
     except Exception:
-        log.exception("extract failed; rolling back from %s", backup)
-        # Best-effort rollback. Remove the half-extracted dir, restore backup.
-        if install_dir.exists():
-            shutil.rmtree(install_dir, ignore_errors=True)
-        backup.rename(install_dir)
+        shutil.rmtree(staged, ignore_errors=True)
+        log.exception("extract failed; install left untouched")
         raise
 
-    _restore_uninstaller(backup, install_dir)
+    # Carry the user's own files and Inno's uninstaller into the new tree
+    # while the old one is still intact.
+    _preserve_user_data(install_dir, staged)
+    _restore_uninstaller(install_dir, staged)
+
+    log.info("renaming current install %s -> %s", install_dir, backup)
+    install_dir.rename(backup)
+    try:
+        staged.rename(install_dir)
+    except Exception:
+        log.exception("could not move the new install into place; rolling back")
+        backup.rename(install_dir)
+        shutil.rmtree(staged, ignore_errors=True)
+        raise
+
     log.info("update extracted OK; backup retained at %s", backup)
+    _prune_old_backups(install_dir)
     return install_dir
+
+
+# Files and folders the app creates at runtime inside its own install
+# directory. They are not in the release zip, so a wholesale folder swap
+# deletes them: the API key in .env, every setting in config.yaml and every
+# recorded session. The app resolves all three relative to the working
+# directory, and both the Inno shortcut and relaunch() set that to the
+# install directory, so this really is where they live.
+_USER_DATA = ("config.yaml", ".env", "sessions")
+
+
+def _preserve_user_data(old: Path, new: Path) -> None:
+    """Move the driver's own files into the freshly extracted tree."""
+    for name in _USER_DATA:
+        src = old / name
+        if not src.exists():
+            continue
+        dst = new / name
+        if dst.exists():
+            # Shipped in the zip after all — don't clobber the new version.
+            continue
+        try:
+            if src.is_dir():
+                shutil.copytree(src, dst)
+            else:
+                shutil.copy2(src, dst)
+            log.info("preserved user data %s", name)
+        except OSError as exc:
+            log.warning("could not preserve %s: %s", name, exc)
+
+
+def _prune_old_backups(install_dir: Path, keep: int = 1) -> None:
+    """Delete all but the newest ``keep`` .bak directories.
+
+    The bundle is a few hundred MB and nothing ever removed these, so a user
+    who accepts a handful of updates silently loses gigabytes that no
+    uninstall reclaims.
+    """
+    pattern = install_dir.name + ".bak.*"
+    backups = sorted(
+        (p for p in install_dir.parent.glob(pattern) if p.is_dir()),
+        key=lambda p: p.name,
+    )
+    for old in backups[:-keep] if keep else backups:
+        shutil.rmtree(old, ignore_errors=True)
+        log.info("pruned old backup %s", old)
 
 
 def _restore_uninstaller(backup: Path, install_dir: Path) -> None:

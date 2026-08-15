@@ -121,6 +121,11 @@ class _DownloadWorker(QObject):
                         f.write(chunk)
                         read += len(chunk)
                         self.progress.emit(read, total)
+            # A reset connection ends the read loop with no error, so without
+            # this a truncated zip looked like a complete download — and it
+            # then went on to replace a working install.
+            if total and read != total:
+                raise OSError(f"download truncated: got {read} of {total} bytes")
             self.finished.emit(self._dest)
         except Exception as exc:  # pragma: no cover — network paths
             log.warning("download failed: %s", exc)
@@ -293,6 +298,11 @@ def _verify_and_spawn(parent: QWidget, info: UpdateInfo, zip_path: Path) -> None
     ]
     if expected:
         args += ["--sha256", expected]
+    # The default is 10 s, but the notice below is MODAL: the app does not
+    # exit until the user clicks OK. Anyone who reads the text, alt-tabs, or
+    # simply looks away blows through the wait, and the updater then tries to
+    # rename a directory containing a still-running GT7Coach.exe.
+    args += ["--wait-timeout", "120"]
 
     log.info("spawning updater: %r", args)
     try:
@@ -310,15 +320,15 @@ def _verify_and_spawn(parent: QWidget, info: UpdateInfo, zip_path: Path) -> None
         QMessageBox.critical(parent, "Could not start updater", str(exc))
         return
 
-    # Tell the user, then quit so the updater can replace files.
+    # Close FIRST, then tell the user. The notice is modal, so showing it
+    # before the close left the app alive for as long as the dialog sat
+    # unread — racing the updater's wait for this PID to exit.
+    parent.close()
     QMessageBox.information(
         parent,
         "Updating",
-        "GT7 AI Coach will close now. A small updater window will swap in "
+        "GT7 AI Coach is closing. A small updater window will swap in "
         "the new version and start it again.\n\n"
         "If nothing reopens within a minute, the updater log is at\n"
         "%TEMP%\\gt7coach-updater.log",
     )
-    # Close the application window. Qt will fire MainWindow.closeEvent
-    # which already stops the runner and tail.
-    parent.close()

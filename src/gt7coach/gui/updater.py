@@ -123,8 +123,19 @@ def _parse_version(s: str) -> tuple[int, ...]:
 
 def is_newer(remote_tag: str, current: str = CURRENT_VERSION) -> bool:
     """Compare ``remote_tag`` vs ``current``. Returns True iff remote
-    is strictly newer."""
-    return _parse_version(remote_tag) > _parse_version(current)
+    is strictly newer.
+
+    Tuples are zero-padded to the same length first: ``(0, 2, 0) > (0, 2)``
+    is True in plain tuple ordering, so a two-component ``__version__``
+    against a three-component tag would report an update forever and the
+    app would re-download the build it is already running.
+    """
+    a = _parse_version(remote_tag)
+    b = _parse_version(current)
+    width = max(len(a), len(b))
+    a += (0,) * (width - len(a))
+    b += (0,) * (width - len(b))
+    return a > b
 
 
 def _read_cache() -> dict | None:
@@ -199,8 +210,14 @@ class _CheckWorker(QObject):
             if not self._force:
                 cached = _read_cache()
                 if cached and time.time() - float(cached.get("checked_at", 0)) < CACHE_INTERVAL_S:
-                    # Use the cached result without hitting the network.
-                    if cached.get("update_available") and cached.get("tag"):
+                    # Re-evaluate the cached TAG rather than replaying the
+                    # cached verdict. The verdict was reached by the previous
+                    # build; after a successful update the new build starts
+                    # inside the 6 h window, reads "update_available: true"
+                    # for the version it is already running, and offers to
+                    # install it again — re-downloading and re-swapping the
+                    # identical bundle until the cache expires.
+                    if cached.get("tag") and is_newer(str(cached["tag"])):
                         info = UpdateInfo(
                             tag=cached["tag"],
                             name=cached.get("name", cached["tag"]),
@@ -293,7 +310,22 @@ class UpdateChecker(QObject):
         self._thread.finished.connect(self._cleanup)
         self._thread.start()
 
+    def shutdown(self, timeout_ms: int = 2000) -> None:
+        """Stop any in-flight check and wait, so the window can close safely."""
+        thread = self._thread
+        if thread is not None and thread.isRunning():
+            thread.quit()
+            if not thread.wait(timeout_ms):
+                log.warning("update-check thread did not finish in %d ms", timeout_ms)
+
     def _cleanup(self) -> None:
+        # Only tear down the run that actually finished. check() guards on
+        # isRunning(), which is already False between the worker emitting its
+        # result and this queued slot running — so a second check started in
+        # that window would otherwise be destroyed here, mid-run, taking its
+        # C++ object out from under the thread executing it.
+        if self.sender() is not self._thread:
+            return
         if self._worker is not None:
             self._worker.deleteLater()
             self._worker = None

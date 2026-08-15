@@ -30,6 +30,9 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    # A cold Nuitka compile of PySide6 + the three LLM SDKs is slow; without a
+    # ceiling a wedged compile burns the full 6 h default.
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
 
@@ -45,7 +48,11 @@ jobs:
         run: |
           if ("${{ github.ref_type }}" -eq "tag") {
             $tag = "${{ github.ref_name }}"
-            $isRelease = "${{ github.ref }}" -like "refs/tags/v*"
+            # Strict semver only. A throwaway test tag like "vdev-nuitka-1"
+            # must NOT publish, because a non-draft release silently becomes
+            # /releases/latest — which the README badge, install.ps1 and the
+            # in-app updater all point at.
+            $isRelease = $tag -match '^v[0-9]+\.[0-9]+\.[0-9]+$' 
           } else {
             $tag = "${{ github.event.inputs.tag }}"
             if (-not $tag) { $tag = "vdev" }
@@ -62,6 +69,31 @@ jobs:
           "is_release=$($isRelease.ToString().ToLower())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           Write-Host "tag=$tag version=$version numver=$numver is_release=$isRelease"
 
+      - name: Stamp the version from the tag
+        if: steps.vars.outputs.is_release == 'true'
+        shell: pwsh
+        run: |
+          # Without this the binary reports whatever __version__ happens to be
+          # committed. Tagging v0.1.17 while the source still says 0.1.16 ships
+          # an app that compares itself against the release it IS and shows the
+          # update banner forever, re-downloading the same bundle on every
+          # click. Only stamped for real semver releases.
+          $v = "${{ steps.vars.outputs.version }}"
+          $f = "src/gt7coach/__init__.py"
+          $c = Get-Content $f -Raw
+          $new = [regex]::Replace($c, '__version__\s*=\s*"[^"]*"', "__version__ = `"$v`"")
+          if ($new -eq $c) { throw "could not stamp __version__ in $f" }
+          Set-Content -Path $f -Value $new -NoNewline
+          Write-Host "stamped __version__ = $v"
+
+      - name: Cache the Nuitka compile
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\Nuitka\Nuitka\Cache
+          key: nuitka-${{ runner.os }}-py313-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            nuitka-${{ runner.os }}-py313-
+
       - name: Install build dependencies
         shell: pwsh
         run: |
@@ -77,34 +109,49 @@ jobs:
           # SAPI5 backend) / google.api_core may not be installed. --include-package
           # on pyttsx3 already pulls its drivers.sapi5 submodule. Crypto
           # (pycryptodome) loads cipher backends dynamically, so force it in.
+          # GitHub prefixes pwsh steps with $ErrorActionPreference='Stop'. This
+          # probe is EXPECTED to exit non-zero (google.api_core is not a
+          # dependency of google-genai), and where pwsh also treats native
+          # exit codes as terminating, that would kill the step before Nuitka
+          # ever runs. Relax both for the duration of the loop.
+          $ErrorActionPreference = 'Continue'
+          $PSNativeCommandUseErrorActionPreference = $false
           $optional = @('pyttsx3','comtypes','anthropic','openai','google.genai','google.auth','google.api_core','Crypto')
           $inc = @()
           foreach ($p in $optional) {
-            python -c "import importlib; importlib.import_module('$p')" 2>$null
+            python -c "import importlib.util,sys; sys.exit(0 if importlib.util.find_spec('$p') else 1)" 2>$null
             if ($LASTEXITCODE -eq 0) { $inc += "--include-package=$p" }
             else { Write-Host "note: optional package not importable, skipping include: $p" }
           }
+          $ErrorActionPreference = 'Stop' 
           $nk = @(
             '--standalone','--assume-yes-for-downloads',
             '--enable-plugin=pyside6','--windows-console-mode=disable',
             '--company-name=Szilva Solutions','--product-name=GT7 AI Coach',
             '--file-version=${{ steps.vars.outputs.numver }}.0',
             '--product-version=${{ steps.vars.outputs.numver }}.0',
-            '--include-package-data=gt7coach',
             '--include-data-dir=src/gt7coach/tracks/data=gt7coach/tracks/data',
             '--include-data-dir=src/gt7coach/gui/assets=gt7coach/gui/assets',
             '--include-data-files=config.example.yaml=config.example.yaml'
           ) + $inc + @(
-            '--output-filename=GT7Coach.exe','--output-dir=build-nuitka',
+            # NO --output-filename here: Nuitka rejects it in --standalone mode
+            # ("may only specify output filename for acceleration and onefile
+            # mode"). The binary is named after the entry script, so it comes
+            # out as app.exe and is renamed below.
+            '--output-dir=build-nuitka',
             'src/gt7coach/gui/app.py'
           )
           Write-Host "nuitka args: $($nk -join ' ')"
           python -m nuitka @nk
-          if (-not (Test-Path build-nuitka/app.dist/GT7Coach.exe)) {
-            throw "Nuitka did not produce GT7Coach.exe"
+          if (-not (Test-Path build-nuitka/app.dist/app.exe)) {
+            throw "Nuitka did not produce app.exe"
           }
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Move-Item build-nuitka/app.dist dist/GT7Coach
+          Rename-Item dist/GT7Coach/app.exe GT7Coach.exe
+          if (-not (Test-Path dist/GT7Coach/GT7Coach.exe)) {
+            throw "rename to GT7Coach.exe failed"
+          }
           $mb = [math]::Round((Get-ChildItem -Recurse dist/GT7Coach | Measure-Object Length -Sum).Sum / 1MB, 1)
           Write-Host "GT7Coach folder is $mb MB"
 
@@ -147,7 +194,12 @@ jobs:
       - name: Build the Inno Setup installer
         shell: pwsh
         run: |
-          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          # Don't hardcode the major version — choco may install Inno 7, and a
+          # missing path here fails with an opaque "term is not recognized".
+          $iscc = (Get-ChildItem "${env:ProgramFiles(x86)}\Inno Setup *\ISCC.exe" -ErrorAction SilentlyContinue |
+                   Select-Object -First 1 -ExpandProperty FullName)
+          if (-not $iscc) { throw "ISCC.exe not found - is Inno Setup installed?" }
+          Write-Host "using $iscc"
           & $iscc "/DMyAppVersion=${{ steps.vars.outputs.version }}" "/DMySrcDir=$($PWD.Path)\dist\GT7Coach" packaging\gt7coach.iss
           $setup = "dist/installer/GT7Coach-Setup.exe"
           if (-not (Test-Path $setup)) { throw "installer not produced at $setup" }

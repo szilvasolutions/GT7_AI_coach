@@ -291,3 +291,68 @@ def test_swap_without_an_uninstaller_is_unaffected(tmp_path):
     swap_install(zip_path, install)
     assert (install / "GT7Coach.exe").read_text() == "new"
     assert not list(install.glob("unins*"))
+
+
+def test_swap_preserves_the_drivers_own_files(stub, tmp_path: Path) -> None:
+    """config.yaml, .env and sessions/ live inside the install directory.
+
+    The swap replaces that whole directory, so without an explicit carry-over
+    an update silently destroyed the user's API key, their settings and every
+    recorded session.
+    """
+    install = _make_install_dir(tmp_path)
+    (install / "config.yaml").write_text("coach:\n  car_class: Gr.3\n", encoding="utf-8")
+    (install / ".env").write_text("GEMINI_API_KEY=secret\n", encoding="utf-8")
+    sessions = install / "sessions" / "run_20260813_115950"
+    sessions.mkdir(parents=True)
+    (sessions / "telemetry.csv").write_text("speed\n120\n", encoding="utf-8")
+
+    stub.swap_install(_make_release_zip(tmp_path), install)
+
+    assert (install / "config.yaml").read_text(encoding="utf-8").startswith("coach:")
+    assert "secret" in (install / ".env").read_text(encoding="utf-8")
+    assert (install / "sessions" / "run_20260813_115950" / "telemetry.csv").is_file()
+    # ...and the new build still landed.
+    assert (install / "GT7Coach.exe").read_bytes() == b"new-fake-exe"
+
+
+def test_a_corrupt_zip_leaves_the_existing_install_untouched(stub, tmp_path: Path) -> None:
+    """The old order renamed the install away and only then opened the zip."""
+    install = _make_install_dir(tmp_path)
+    bad = tmp_path / "bad.zip"
+    bad.write_bytes(b"this is not a zip file at all")
+
+    with pytest.raises(zipfile.BadZipFile):
+        stub.swap_install(bad, install)
+
+    assert (install / "GT7Coach.exe").read_bytes() == b"old-fake-exe"
+    assert (install / "README.txt").read_text(encoding="utf-8") == "old README\n"
+    assert not list(install.parent.glob("GT7Coach.bak.*")), "must not leave an orphan backup"
+
+
+def test_extraction_refuses_to_escape_the_install_dir(stub, tmp_path: Path) -> None:
+    """A member named ../../evil.exe must not be written outside the target."""
+    zip_path = tmp_path / "evil.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("GT7Coach/GT7Coach.exe", "fine")
+        zf.writestr("GT7Coach/../../evil.exe", "pwned")
+
+    dest = tmp_path / "dest"
+    dest.mkdir()
+    with zipfile.ZipFile(zip_path) as zf, pytest.raises(ValueError, match="outside"):
+        stub._extract_stripping_root(zf, dest)
+    assert not (tmp_path / "evil.exe").exists()
+
+
+def test_old_backups_are_pruned(stub, tmp_path: Path) -> None:
+    """Each swap kept a full ~300 MB copy forever; nothing ever removed them."""
+    install = _make_install_dir(tmp_path)
+    for stamp in ("20260101_000000", "20260102_000000"):
+        stale = tmp_path / f"GT7Coach.bak.{stamp}"
+        stale.mkdir()
+        (stale / "junk.bin").write_bytes(b"x")
+
+    stub.swap_install(_make_release_zip(tmp_path), install)
+
+    remaining = sorted(p.name for p in tmp_path.glob("GT7Coach.bak.*"))
+    assert len(remaining) == 1, f"expected only the newest backup, got {remaining}"

@@ -46,6 +46,11 @@ try {
         if ($want -ne $got) { throw "Checksum mismatch - expected $want but got $got" }
         Write-Host '  Checksum OK.'
     }
+    else {
+        # Fails open by design (a release without SHA256SUMS.txt should still
+        # install), but say so rather than implying the download was verified.
+        Write-Host '  Note: no checksum published for this release - skipping verification.'
+    }
 
     if ($asset.name -like '*.exe') {
         # Installer wizard: just launch it.
@@ -56,6 +61,14 @@ try {
     }
     else {
         # Portable zip: extract next to this script and launch.
+        # Refuse to extract over a running copy. Expand-Archive -Force
+        # overwrites file by file and throws partway through when it reaches
+        # the locked exe, leaving new DLLs beside the old binary - a build
+        # that crashes on launch, with nothing saying the folder was touched.
+        $running = Get-Process -Name 'GT7Coach' -ErrorAction SilentlyContinue
+        if ($running) {
+            throw 'GT7 AI Coach is still running. Close it and run this again.'
+        }
         Write-Host '  Extracting ...'
         Expand-Archive -Path $out -DestinationPath $dest -Force
         Remove-Item $out -Force
@@ -75,6 +88,6 @@ catch {
     Write-Host ''
     Write-Host '  Grab it by hand instead:'
     Write-Host "    https://github.com/$repo/releases/latest"
-    Write-Host '  Download GT7Coach-Setup-*.exe (or the -win64.zip), then run it.'
+    Write-Host '  Download GT7Coach-Setup.exe (or the -win64.zip), then run it.'
     exit 1
 }

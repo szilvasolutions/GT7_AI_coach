@@ -243,6 +243,7 @@ class MainWindow(QMainWindow):
         # the monotonic start time; if exited fires within ~5 s of that
         # stamp with a non-zero code, we surface the captured stderr.
         self._process_started_at: float | None = None
+        self._run_generation = 0
         self._recent_stderr: collections.deque[str] = collections.deque(maxlen=20)
         self._runner.stderr_line.connect(self._recent_stderr.append)
         # Tracks whether the most recent exit was triggered by a Stop click
@@ -337,6 +338,11 @@ class MainWindow(QMainWindow):
         if self._runner.is_running():
             log.info("Start: runner already running, ignoring click")
             return
+        # The stderr ring buffer outlives a run. Without this, a failed run's
+        # "PS5 not discovered" line was still in the deque on the next run and
+        # popped the PS5 wizard over an unrelated later failure.
+        self._run_generation += 1
+        self._recent_stderr.clear()
         log.debug("Start: clearing live log")
         self._live_log.clear_log()
         log.debug("Start: clearing status panel")
@@ -378,9 +384,15 @@ class MainWindow(QMainWindow):
         # because they want it gone NOW.
         from PySide6.QtCore import QTimer
 
-        QTimer.singleShot(3000, self._stop_force_kill_if_alive)
+        # Tie the timer to THIS run. Otherwise stopping a run and starting a
+        # new one within 3 s let the old timer fire and kill the new session.
+        generation = self._run_generation
+        QTimer.singleShot(3000, lambda: self._stop_force_kill_if_alive(generation))
 
-    def _stop_force_kill_if_alive(self) -> None:
+    def _stop_force_kill_if_alive(self, generation: int) -> None:
+        if generation != self._run_generation:
+            log.info("Stop: force-kill timer belongs to an older run — ignoring")
+            return
         if self._runner.is_running():
             log.warning("Stop: subprocess still alive after 3 s grace — force killing")
             self._runner.stop()  # second call escalates to kill() in CoachRunner.stop()
@@ -430,7 +442,7 @@ class MainWindow(QMainWindow):
         # 3 s subnet scan) so the 5 s immediate-crash window misses it.
         # Scan the captured stderr for the specific error string.
         joined_stderr = "\n".join(self._recent_stderr)
-        if "PS5 not discovered" in joined_stderr and not was_user_stop:
+        if "PS5 not discovered" in joined_stderr and not was_user_stop and exit_code != 0:
             QMessageBox.warning(
                 self,
                 "Can't find your PS5",
@@ -507,7 +519,10 @@ class MainWindow(QMainWindow):
         if not self._update_check_was_manual:
             return
         self._update_check_was_manual = False
-        if can_self_update():
+        # info.zip_url matters as much as can_self_update(): a release without
+        # a win64.zip asset would otherwise offer an install that dead-ends in
+        # "No download URL". The banner already checks this; the dialog did not.
+        if can_self_update() and info.zip_url:
             answer = QMessageBox.question(
                 self,
                 "Update available",
@@ -607,8 +622,19 @@ class MainWindow(QMainWindow):
         )
         self._save_settings()
         if self._runner.is_running():
-            self._runner.stop()
+            # Block until the coach is actually dead. See CoachRunner.shutdown.
+            if not self._runner.shutdown():
+                log.error("coach subprocess survived shutdown — it may still hold UDP 33740")
         self._status_tail.stop()
+        # A QThread parented to this window that is still running when the
+        # window is destroyed makes Qt call qFatal("Destroyed while thread is
+        # still running") — an abort, i.e. a crash dialog instead of an exit.
+        # The startup update check does a blocking urlopen, so closing the
+        # window in the first few seconds on a slow or captive network hit
+        # exactly that.
+        checker = getattr(self, "_update_checker", None)
+        if checker is not None:
+            checker.shutdown()
         super().closeEvent(event)
 
 
@@ -656,7 +682,10 @@ def _init_gui_logging(verbose: bool) -> Path:
     root.addHandler(fh)
 
     # Stderr handler — INFO by default, DEBUG with -v.
-    sh = logging.StreamHandler(stream=sys.stderr)
+    # Nuitka's --windows-console-mode=disable leaves sys.stderr as None (unlike
+    # PyInstaller, which substitutes a null writer). StreamHandler(None) then
+    # raises inside emit() for every single record.
+    sh = logging.StreamHandler(stream=sys.stderr) if sys.stderr else logging.NullHandler()
     sh.setLevel(logging.DEBUG if verbose else logging.INFO)
     sh.setFormatter(fmt)
     root.addHandler(sh)

@@ -13,10 +13,13 @@ both zetetos's kaitai schema and Nenkai's PDTools).
 from __future__ import annotations
 
 import json
+import logging
 import math
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(slots=True, frozen=True)
@@ -149,6 +152,10 @@ def load_default_tracks() -> dict[str, Track]:
     """Lazy-load the built-in track database."""
     path = _load_database_path()
     if not path.is_file():
+        # Silence here means "the coach never recognises a track" with nothing
+        # in any log to explain it — the exact symptom if a packaging change
+        # ever drops the data files from the bundle.
+        log.error("track database missing at %s — track detection disabled", path)
         return {}
     raw = json.loads(path.read_text(encoding="utf-8"))
     out: dict[str, Track] = {}

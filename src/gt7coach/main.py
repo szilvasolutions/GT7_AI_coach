@@ -295,7 +295,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--api-key", default=None, help="Override env-var API key")
     p.add_argument(
         "--driver-style",
-        default="smooth",
+        default=None,
         choices=["smooth", "aggressive", "learning"],
     )
     p.add_argument(
@@ -318,13 +318,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     # Voice flags.
     p.add_argument(
         "--voice",
-        default="pyttsx3",
+        default=None,
         help='Voice engine: "pyttsx3" or "null" (no audio, log only)',
     )
     p.add_argument(
         "--voice-rate",
         type=int,
-        default=200,
+        default=None,
         help="TTS rate in words/minute (default 200). Default lowered from 230 "
         "after operator feedback that 230 felt rushed in cockpit audio.",
     )
@@ -477,13 +477,17 @@ def main(argv: list[str] | None = None) -> int:
             )
         return 2
 
-    voice_name = args.voice if args.voice != "pyttsx3" else cfg.voice.engine
+    # "not given" must be None, never the default value itself: with the old
+    # sentinel, asking explicitly for the default was indistinguishable from
+    # staying silent, so a config.yaml voice.engine of null plus a toolbar
+    # showing "pyttsx3" ran the coach with no voice at all.
+    voice_name = args.voice if args.voice is not None else cfg.voice.engine
     if voice_name == "system":  # documented alias: pyttsx3 IS the system TTS
         voice_name = "pyttsx3"
     voice_kwargs: dict[str, object] = {}
     if voice_name == "pyttsx3":
         # CLI default is 200; an explicit --voice-rate wins over YAML.
-        voice_kwargs["rate"] = args.voice_rate if args.voice_rate != 200 else cfg.voice.speed
+        voice_kwargs["rate"] = args.voice_rate if args.voice_rate is not None else cfg.voice.speed
     elif voice_name == "piper":
         voice_kwargs["voice"] = cfg.voice.piper_voice
         if cfg.voice.piper_model_path:
@@ -504,9 +508,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     car_class = args.car_class if args.car_class is not None else cfg.coach_car_class
     advisor_cfg = AdvisorConfig(
-        driver_style=args.driver_style
-        if args.driver_style != "smooth"
-        else cfg.advisor.driver_style,
+        driver_style=(
+            args.driver_style if args.driver_style is not None else cfg.advisor.driver_style
+        ),
         car_class=car_class,
     )
     if args.source == "live":
@@ -611,7 +615,14 @@ def main(argv: list[str] | None = None) -> int:
     corner_idx = 0
     # Two logged sessions went silent because the laptop slept mid-race. Hold
     # sleep off for as long as the coach is running; released in the finally.
-    keep_awake = KeepAwake()
+    #
+    # keep_display_on matters as much as the system flag. The driver is racing
+    # on a console and never touches the PC, so Windows sees an idle machine
+    # and blanks the screen — and on a Modern Standby laptop that blank is the
+    # doorway into S0ix, where ES_SYSTEM_REQUIRED alone does not keep us
+    # running. A session that reported "went dark, then stopped talking" was
+    # holding only the system flag.
+    keep_awake = KeepAwake(keep_display_on=True)
     if args.source == "live":
         keep_awake.acquire()
     # A live console is authoritative about its own flags; a CSV capture may
@@ -624,8 +635,11 @@ def main(argv: list[str] | None = None) -> int:
     # fell through to kill() and surfaced as "Crashed: Process crashed".
     stop_file_env = os.environ.get("GT7COACH_STOP_FILE")
     stop_file = Path(stop_file_env) if stop_file_env else None
-    if stop_file is not None and stop_file.exists():
-        stop_file.unlink(missing_ok=True)  # stale file from a previous run
+    # Do NOT clear the stop file here. The GUI already unlinks it in
+    # CoachRunner.start() before spawning us, so by this point — several
+    # seconds in, after provider, voice and receiver setup — anything present
+    # is a LIVE stop request from a user who clicked Stop during startup.
+    # Deleting it threw that request away and the run had to be force-killed.
     try:
         for packet in stream:
             if session is not None:

@@ -426,3 +426,27 @@ def test_a_nuitka_build_passes_run_coach_not_dash_m(qapp, monkeypatch, tmp_path)
         if r._proc is not None:
             r._proc.kill()
             r._proc.waitForFinished(2000)
+
+
+def test_unset_options_are_left_to_the_config_file() -> None:
+    """The GUI must not send settings it has no widget for.
+
+    CoachOptions used to default to the CLI's own defaults and pass them on
+    every launch, so config.yaml's cooldown was overridden by --cooldown 4.0
+    on every single Start and the tuned value never took effect.
+    """
+    argv = CoachOptions().to_argv()
+    assert "--cooldown" not in argv
+    assert "--voice" not in argv
+    assert "--voice-rate" not in argv
+    assert "--driver-style" not in argv
+
+
+def test_options_the_user_actually_set_are_still_passed() -> None:
+    argv = CoachOptions(
+        voice="null", voice_rate=210, driver_style="learning", cooldown=3.3
+    ).to_argv()
+    assert argv[argv.index("--cooldown") + 1] == "3.3"
+    assert argv[argv.index("--voice") + 1] == "null"
+    assert argv[argv.index("--voice-rate") + 1] == "210"
+    assert argv[argv.index("--driver-style") + 1] == "learning"

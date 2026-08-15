@@ -38,14 +38,20 @@ log = logging.getLogger(__name__)
 class CoachOptions:
     """Snapshot of the GUI's form state, translated to gt7coach-coach argv."""
 
+    # None means "the GUI has no opinion" — leave the value to config.yaml.
+    # These used to default to the CLI's own defaults and be passed on every
+    # launch, which quietly made the GUI authoritative over config.yaml for
+    # settings the GUI does not even expose. The cooldown was the visible
+    # case: config.yaml said 3.5 s, the GUI sent --cooldown 4.0 every time,
+    # and the tuned value never took effect.
     provider: str | None = None  # None = let CLI auto-pick
     api_key: str | None = None
-    voice: str = "pyttsx3"
-    voice_rate: int = 200
-    driver_style: str = "smooth"
+    voice: str | None = None
+    voice_rate: int | None = None
+    driver_style: str | None = None
     car_class: str = ""
     track: str = ""
-    cooldown: float = 4.0
+    cooldown: float | None = None
     no_summary: bool = False
     verbose: bool = False
     extra_args: list[str] = field(default_factory=list)
@@ -56,13 +62,18 @@ class CoachOptions:
             argv += ["--provider", self.provider]
         if self.api_key:
             argv += ["--api-key", self.api_key]
-        argv += ["--voice", self.voice, "--voice-rate", str(self.voice_rate)]
-        argv += ["--driver-style", self.driver_style]
+        if self.voice:
+            argv += ["--voice", self.voice]
+        if self.voice_rate is not None:
+            argv += ["--voice-rate", str(self.voice_rate)]
+        if self.driver_style:
+            argv += ["--driver-style", self.driver_style]
         if self.car_class:
             argv += ["--car-class", self.car_class]
         if self.track:
             argv += ["--track", self.track]
-        argv += ["--cooldown", str(self.cooldown)]
+        if self.cooldown is not None:
+            argv += ["--cooldown", str(self.cooldown)]
         if self.no_summary:
             argv += ["--no-summary"]
         if self.verbose:
@@ -97,6 +108,8 @@ class CoachRunner(QObject):
         # True from the moment the user asks to stop until the process is
         # gone, so an abnormal exit code isn't reported as a crash.
         self._stopping = False
+        self._ever_running = False
+        self._reported_exit = False
         self._stdout_buf = ""
         self._stderr_buf = ""
 
@@ -115,6 +128,11 @@ class CoachRunner(QObject):
             log.warning("runner already running; ignoring start()")
             return
 
+        # Drop the previous run's status file up front. Leaving it set meant a
+        # start that bailed out below (pre-flight failure) left the GUI happily
+        # tailing the *last* run's file and replaying it as if it were live.
+        self._status_file = None
+
         # Pre-flight: confirm the module is importable from sys.executable.
         # Without this, a broken install surfaces as a generic
         # QProcess.FailedToStart with no useful diagnostic on Windows.
@@ -126,18 +144,36 @@ class CoachRunner(QObject):
             )
             return
 
-        # Allocate a fresh status file under the user's temp dir. Phase B's
-        # status emitter truncates it on first emit, so stale content is OK.
+        # Allocate the status file under the user's temp dir. The path is the
+        # same for every run in a GUI session, so truncate it HERE rather than
+        # relying on the child: the child's first status emit is the receiver's
+        # 5 s stats tick, but the GUI starts tailing 200 ms after launch. On
+        # the second run that gap replayed the whole previous session into the
+        # freshly cleared panels, and the child's later truncation then left
+        # the tail reading past EOF — panels frozen for the rest of the run.
         tmpdir = Path(tempfile.gettempdir()) / "gt7coach-gui"
         tmpdir.mkdir(parents=True, exist_ok=True)
         self._status_file = tmpdir / f"status-{os.getpid()}.jsonl"
+        try:
+            self._status_file.write_text("", encoding="utf-8")
+        except OSError as exc:
+            log.warning("could not truncate status file %s: %s", self._status_file, exc)
         self._stop_file = tmpdir / f"stop-{os.getpid()}"
         self._stop_file.unlink(missing_ok=True)
         self._stopping = False
+        self._ever_running = False
+        self._reported_exit = False
 
         env = QProcessEnvironment.systemEnvironment()
         env.insert("GT7COACH_STATUS_FILE", str(self._status_file))
         env.insert("GT7COACH_STOP_FILE", str(self._stop_file))
+        # The child's stdout/stderr are read back as UTF-8 (_on_stdout), but
+        # without this Python encodes them in the console codepage — cp1250 on
+        # a Hungarian Windows. Advice text routinely contains en dashes and
+        # curly quotes from the LLM, which arrive as mojibake at best and
+        # raise UnicodeEncodeError inside the child at worst.
+        env.insert("PYTHONIOENCODING", "utf-8")
+        env.insert("PYTHONUTF8", "1")
 
         cwd = Path.cwd()
 
@@ -217,6 +253,31 @@ class CoachRunner(QObject):
         self._proc.terminate()
         self.state_changed.emit("stopping")
 
+    def shutdown(self, timeout_ms: int = 4000) -> bool:
+        """Stop the coach and block until it is really gone.
+
+        ``stop()`` alone is not enough at window-close time: it writes the stop
+        file and calls terminate(), then returns immediately. The frozen coach
+        is a windowed process with no message loop, so terminate() does
+        nothing, and whether the child died at all came down to the QProcess
+        destructor running during interpreter teardown. When it didn't, the
+        coach kept the UDP port and kept talking with no window to stop it —
+        and an in-place update would then try to replace a directory with a
+        running executable inside it.
+
+        Returns True if the process is gone by the time we return.
+        """
+        if not self.is_running():
+            return True
+        assert self._proc is not None
+        self.stop()
+        if self._proc is not None and not self._proc.waitForFinished(timeout_ms):
+            log.warning("coach did not exit in %d ms — killing", timeout_ms)
+            if self._proc is not None:
+                self._proc.kill()
+                self._proc.waitForFinished(1000)
+        return not self.is_running()
+
     # ---- channel handlers --------------------------------------------------
 
     def _on_stdout(self) -> None:
@@ -252,8 +313,19 @@ class CoachRunner(QObject):
 
     def _on_started(self) -> None:
         """QProcess.started — the OS has confirmed the spawn succeeded."""
+        self._ever_running = True
         self.state_changed.emit("running")
         self.process_ready.emit()
+
+    def _retire(self) -> None:
+        """Drop the finished QProcess, releasing its pipe handles.
+
+        Clearing the reference alone leaked the C++ object (and a stdout /
+        stderr handle pair) for the life of the window, one per Start.
+        """
+        if self._proc is not None:
+            self._proc.deleteLater()
+            self._proc = None
 
     def _on_finished(self, exit_code: int, _exit_status) -> None:
         log.info("subprocess finished, exit_code=%d", exit_code)
@@ -264,14 +336,17 @@ class CoachRunner(QObject):
             # so MainWindow doesn't treat it as a failure.
             log.info("exit code %d after a requested stop; reporting clean", exit_code)
             exit_code = 0
+        already_reported = self._reported_exit
         self._stopping = False
-        self.state_changed.emit("stopped")
-        self.exited.emit(exit_code)
+        if not already_reported:
+            self.state_changed.emit("stopped")
+            self.exited.emit(exit_code)
         if self._status_file is not None:
             # Leave the status file on disk for one cycle so the GUI can
             # render any final events; the next start() truncates it.
             pass
-        self._proc = None
+        self._reported_exit = True
+        self._retire()
 
     def _on_error(self, error) -> None:
         msg = self._proc.errorString() if self._proc is not None else str(error)
@@ -284,21 +359,33 @@ class CoachRunner(QObject):
             # asked for this, so don't pop "Crashed: Process crashed" at them.
             log.info("QProcess %s during user-requested stop (expected)", error_name)
             if self._proc is not None and self._proc.state() == QProcess.ProcessState.NotRunning:
+                # Leave _stopping set — _on_finished still needs it to report
+                # the kill as a clean exit. It clears the flag itself.
+                self._reported_exit = True
                 self.state_changed.emit("stopped")
                 self.exited.emit(0)
-                self._proc = None
+                self._retire()
             return
         log.warning("QProcess error %s: %s", error_name, msg)
-        # Tell MainWindow exactly what went wrong. Without this signal the
-        # operator gets the status bar flickering from "running" to "stopped"
-        # with no popup and no clue what to fix.
-        self.start_failed.emit(f"{error_name}: {msg}")
+        # Only a process that never reached Running has "failed to start".
+        # A mid-session crash also raises errorOccurred, and reporting that as
+        # a start failure told the driver "Coach failed to start — try the
+        # bare CLI" twenty minutes into a race, on top of the crash dialog and
+        # a second exit report from `finished`.
+        if not self._ever_running:
+            self.start_failed.emit(f"{error_name}: {msg}")
         # On QProcess.FailedToStart we never get a `finished` signal, so
-        # emit a synthetic exit so the UI returns to the idle state.
-        if self._proc is not None and self._proc.state() == QProcess.ProcessState.NotRunning:
+        # emit a synthetic exit so the UI returns to the idle state. When
+        # `finished` IS coming, let it do the reporting instead of duplicating.
+        if (
+            not self._reported_exit
+            and self._proc is not None
+            and self._proc.state() == QProcess.ProcessState.NotRunning
+        ):
+            self._reported_exit = True
             self.state_changed.emit("stopped")
             self.exited.emit(-1)
-            self._proc = None
+            self._retire()
 
 
 def python_module_available(module: str) -> bool:

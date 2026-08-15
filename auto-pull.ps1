@@ -2,7 +2,10 @@
 $Branch = "main"
 $Interval = 30
 
-Set-Location $RepoPath
+# Without -ErrorAction Stop the default 'Continue' prints one red line and
+# then the loop below runs git fetch/pull against whatever directory happens
+# to be current - potentially a different repository.
+Set-Location $RepoPath -ErrorAction Stop
 Write-Host "Watching $RepoPath for updates from origin/$Branch every $Interval seconds..."
 Write-Host "Press Ctrl+C to stop."
 
