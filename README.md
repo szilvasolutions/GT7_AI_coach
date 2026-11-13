@@ -12,6 +12,14 @@ No Python, no unzipping, nothing to set up first.
 
 </div>
 
+<div align="center">
+
+[![Watch the coach at work: Gran Turismo 7 AI live coach](https://i.ytimg.com/vi/5A18_Lgh4KI/maxresdefault.jpg)](https://youtu.be/5A18_Lgh4KI)
+
+**▶ Watch the coach at work** (YouTube, sound on)
+
+</div>
+
 ---
 
 The coach reads Gran Turismo 7's telemetry stream from your PS4/PS5, detects
@@ -42,6 +50,14 @@ installs new versions. Nothing to re-download manually, ever.
 **Prefer a portable copy?** Grab `GT7Coach-vX.Y.Z-win64.zip` from the
 [releases page](https://github.com/szilvasolutions/GT7_AI_coach/releases/latest)
 — the same app in a folder, no installer.
+
+## Support this project
+
+The coach is free and I build it in my spare time. If it found you some lap
+time, or you want to nudge a feature along, you can buy me a coffee. Bug
+reports and feature requests are just as welcome.
+
+<a href="https://buymeacoffee.com/szilvasolus" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="50" width="210"></a>
 
 ## About
 
